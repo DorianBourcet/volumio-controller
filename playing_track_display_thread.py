@@ -14,7 +14,9 @@ class PlayingTrackDisplayThread(Thread):
   def run(self):
     while not self._stop_event.is_set():
       if self._volumio.is_playing():
+        print(self._volumio.get_playing_track())
         self._display.set_persistent_texts(self._volumio.get_playing_track())
       else:
         self._display.set_persistent_texts(['...'])
       time.sleep(0.25)
+    print('event is set, exiting...')
