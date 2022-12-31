@@ -58,7 +58,6 @@ class RadioStateMachine(object):
   
   def on_enter_playing(self):
     self._volumio.resume()
-    print('issuing new persistent text - track')
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
     playing_track_thread.daemon = True
@@ -69,7 +68,6 @@ class RadioStateMachine(object):
 
   def on_enter_sleeping(self):
     self._volumio.stop()
-    print('issuing new persistent text - clock')
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
     datetime_thread.daemon = True

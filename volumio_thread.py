@@ -43,11 +43,11 @@ class VolumioThread(Thread):
       self._volumio_status = status
       self._status_since = time.time()
     self._volumio_status = status
-    self._volumio_artist = state.get('artist', '')
-    self._volumio_title = state.get('title', '')
-    self._volumio_service = state.get('service', '')
+    self._volumio_artist = state.get('artist', '').strip()
+    self._volumio_title = state.get('title', '').strip()
+    self._volumio_service = state.get('service', '').strip()
     self._volumio_queue_position = state.get('position', 0)
-    self._volumio_track_type = state.get('trackType', '')
+    self._volumio_track_type = state.get('trackType', '').strip()
     self._volumio_duration = state.get('duration', 0)
   
   def _estimate_volumio_seek(self, new_state, prev_title, prev_artist):
