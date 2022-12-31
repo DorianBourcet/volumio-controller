@@ -15,7 +15,7 @@ class RadioStateMachine(object):
       'name': 'home',
       'children': [
         'playing',
-        'holding'
+        'holding',
         'sleeping',
       ]
     }
@@ -25,11 +25,12 @@ class RadioStateMachine(object):
   transitions = [
     #{ 'trigger': 'show_menu', 'source': 'standing', 'dest': 'menu' },
     #{ 'trigger': 'exit_menu', 'source': 'menu', 'dest': 'standing' },
+    { 'trigger': 'wait_for_connection', 'source': '*', 'dest': 'connecting' },
     { 'trigger': 'back_home', 'source': '*', 'dest': 'home' },
-    { 'trigger': 'refresh', 'source': 'home', 'dest': 'home' },
-    { 'trigger': 'play_track', 'source': ['home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
-    { 'trigger': 'pause_track', 'source': 'home_playing', 'dest': 'home_pause', 'conditions': 'can_pause' },
-    { 'trigger': 'stop_track', 'source': 'home_playing', 'dest': 'home_sleeping'},
+    { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
+    { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
+    { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_pause', 'conditions': 'can_pause' },
+    { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping'},
   ]
 
   def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
@@ -42,9 +43,12 @@ class RadioStateMachine(object):
     self.machine = HierarchicalMachine(
       model=self,
       states=RadioStateMachine.states,
-      initial='home_sleeping',
+      initial='connecting',
       transitions=RadioStateMachine.transitions
     )
+    active_to_quiet_thread = ActiveToQuietDisplayThread(self._display,self._latest_active_to_quiet_stop_event,self._quiet_event)
+    active_to_quiet_thread.daemon = True
+    active_to_quiet_thread.start()
   
   def _issue_new_persistent_display_stop_event(self):
     self._latest_persistent_display_stop_event.set()
@@ -64,14 +68,18 @@ class RadioStateMachine(object):
     active_to_quiet_thread.daemon = True
     active_to_quiet_thread.start()
   
+  def on_enter_connecting(self):
+    self._issue_new_active_to_quiet_stop_event()
+    self._issue_new_persistent_display_stop_event()
+    self._display.set_persistent_texts(['En attente de Volumio...'])
+  
   def on_enter_home(self):
-    print('entered home')
     if self._volumio.is_playing():
-      self.to_home_playing()
+      self.play_track()
     elif self._volumio.is_on_pause():
-      self.to_home_holding()
+      self.pause_track()
     elif self._volumio.has_status_stop():
-      self.to_home_sleeping()
+      self.stop_track()
   
   def on_enter_home_playing(self):
     self._volumio.resume()

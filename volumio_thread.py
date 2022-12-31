@@ -13,16 +13,8 @@ class VolumioThread(Thread):
 
   def __init__(self):
     super().__init__()
+    self._socketIO = None
     self._connected = False
-    self._socketIO = SocketIO('localhost', 3000)
-    self._socketIO.on('connect', self._on_connect)
-    self._socketIO.on('disconnect', self._on_disconnect)
-    self._socketIO.on('reconnect', self._on_reconnect)
-    self._socketIO.on('pushState', self._on_state_response)
-    self._socketIO.on('getState_response', self._on_state_response)
-    self._socketIO.on('pushQueue', self._on_queue_response)
-    self._socketIO.on('getQueue_response', self._on_queue_response)
-
     self._volumio_status = 'stop'
     self._volumio_volume = 0
     self._volumio_artist = ''
@@ -34,17 +26,24 @@ class VolumioThread(Thread):
     self._volumio_track_type = ''
     self._volumio_duration = 0
     self._status_since = time.time()
+  
+  def _init_socketIO(self):
+    self._socketIO = SocketIO('localhost', 3000)
+    self._socketIO.on('connect', self._on_connect)
+    self._socketIO.on('disconnect', self._on_disconnect)
+    self._socketIO.on('reconnect', self._on_reconnect)
+    self._socketIO.on('pushState', self._on_state_response)
+    self._socketIO.on('getState_response', self._on_state_response)
+    self._socketIO.on('pushQueue', self._on_queue_response)
+    self._socketIO.on('getQueue_response', self._on_queue_response)
 
   def _on_connect(self):
-    print('connected')
     self._connected = True
 
   def _on_disconnect(self):
-    print('disconnected')
     self._connected = False
 
   def _on_reconnect(self):
-    print('reconnected')
     self._connected = True
 
   def _on_state_response(self, *args):
@@ -88,6 +87,9 @@ class VolumioThread(Thread):
 
   def _on_queue_response(self, *args):
     self._volumio_queue = args[0]
+
+  def is_connected(self):
+    return self._connected
 
   def queue_is_not_empty(self):
     return len(self._volumio_queue) > 0
@@ -216,6 +218,7 @@ class VolumioThread(Thread):
     return self._volumio_service
 
   def run(self):
+    self._init_socketIO()
     self._socketIO.emit('getState')
     self._socketIO.emit('getQueue')
     self._socketIO.wait()

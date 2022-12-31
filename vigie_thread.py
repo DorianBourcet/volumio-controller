@@ -15,6 +15,7 @@ class VigieThread(Thread):
 
   def run(self):
     while True:
-      if self._volumio.get_status() != self._latest_volumio_status:
-        self._radio.refesh_home()
+      if self._radio.is_home(allow_substates=True) and self._volumio.get_status() != self._latest_volumio_status:
+        self._radio.refresh_home()
+        self._latest_volumio_status = self._volumio.get_status()
       time.sleep(0.25)
