@@ -13,7 +13,11 @@ class VolumioThread(Thread):
 
   def __init__(self):
     super().__init__()
+    self._connected = False
     self._socketIO = SocketIO('localhost', 3000)
+    self._socketIO.on('connect', self._on_connect)
+    self._socketIO.on('disconnect', self._on_disconnect)
+    self._socketIO.on('reconnect', self._on_reconnect)
     self._socketIO.on('pushState', self._on_state_response)
     self._socketIO.on('getState_response', self._on_state_response)
     self._socketIO.on('pushQueue', self._on_queue_response)
@@ -30,6 +34,18 @@ class VolumioThread(Thread):
     self._volumio_track_type = ''
     self._volumio_duration = 0
     self._status_since = time.time()
+
+  def _on_connect(self):
+    print('connected')
+    self._connected = True
+
+  def _on_disconnect(self):
+    print('disconnected')
+    self._connected = False
+
+  def _on_reconnect(self):
+    print('reconnected')
+    self._connected = True
 
   def _on_state_response(self, *args):
     state = args[0]
