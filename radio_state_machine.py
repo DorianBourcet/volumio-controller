@@ -1,0 +1,137 @@
+from transitions.extensions import HierarchicalMachine
+from volumio_thread import VolumioThread
+from display_state import DisplayState
+from playing_track_display_thread import PlayingTrackDisplayThread
+from datetime_display_thread import DatetimeDisplayThread
+from active_to_quiet_display_thread import ActiveToQuietDisplayThread
+from threading import Event
+import time
+
+class RadioStateMachine(object):
+
+  states = [
+    'playing',
+    'holding'
+    'sleeping',
+    #'menu',
+  ]
+
+  transitions = [
+    #{ 'trigger': 'show_menu', 'source': 'standing', 'dest': 'menu' },
+    #{ 'trigger': 'exit_menu', 'source': 'menu', 'dest': 'standing' },
+    { 'trigger': 'play_track', 'source': ['sleeping', 'holding'], 'dest': 'playing', 'conditions': 'can_play' },
+    { 'trigger': 'pause_track', 'source': 'playing', 'dest': 'pause', 'conditions': 'can_pause' },
+    { 'trigger': 'stop_track', 'source': 'playing', 'dest': 'sleeping'},
+  ]
+
+  def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
+    self._volumio = volumio
+    self._display = display
+    self._latest_persistent_display_stop_event = Event()
+    self._latest_active_to_quiet_stop_event = Event()
+    self._quiet_event = Event()
+    self._last_input_time = time.time()
+    self.machine = HierarchicalMachine(
+      model=self,
+      states=RadioStateMachine.states,
+      initial='sleeping',
+      transitions=RadioStateMachine.transitions
+    )
+  
+  def _issue_new_persistent_display_stop_event(self):
+    self._latest_persistent_display_stop_event.set()
+    self._latest_persistent_display_stop_event = Event()
+
+  def _issue_new_active_to_quiet_stop_event(self):
+    self._latest_persistent_display_stop_event.set()
+    self._latest_persistent_display_stop_event = Event()
+
+  def _is_quiet(self):
+    now = time.time()
+    return self._quiet_event.is_set()
+
+  def _wake_up(self):
+    self._issue_new_active_to_quiet_stop_event()
+    active_to_quiet_thread = ActiveToQuietDisplayThread(self._display,self._latest_active_to_quiet_stop_event,self._quiet_event)
+    active_to_quiet_thread.daemon = True
+    active_to_quiet_thread.start()
+  
+  def on_enter_playing(self):
+    self._volumio.resume()
+    self._issue_new_persistent_display_stop_event()
+    playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
+    playing_track_thread.daemon = True
+    playing_track_thread.start()
+
+  def on_enter_holding(self):
+    self._volumio.pause()
+
+  def on_enter_sleeping(self):
+    self._volumio.stop()
+    self._issue_new_persistent_display_stop_event()
+    datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
+    datetime_thread.daemon = True
+    datetime_thread.start()
+  
+  def can_play(self):
+    return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
+
+  def can_pause(self):
+    return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.can_pause())
+
+  def user_input_1_right(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    self._volumio.volume_up()
+    self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
+  
+  def user_input_1_left(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    self._volumio.volume_down()
+    self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
+
+  def user_input_4_right(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    next_track_text = self._volumio.get_next_track()
+    if next_track_text is None:
+      next_track_text = '    SUIV >  '
+    self._display.display_temporary_texts([next_track_text],None,True)
+    self._volumio.next_track()
+  
+  def user_input_4_left(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    previous_track_text = self._volumio.get_previous_track()
+    if previous_track_text is None:
+      previous_track_text = '  < PREC    '
+    self._display.display_temporary_texts([previous_track_text],None,True)
+    self._volumio.previous_track()
+
+  def user_input_4_pressed(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+
+  def user_input_4_released(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    state = self.state
+    if state == 'playing':
+      self.stop_track()
+    elif state == 'holding':
+      self.play_track()
+    elif state == 'sleeping':
+      self.play_track()

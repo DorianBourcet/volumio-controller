@@ -6,6 +6,11 @@ import math
 
 class VolumioThread(Thread):
 
+  unpausable_services = [
+    'metaradio',
+    'webradio',
+  ]
+
   def __init__(self):
     super().__init__()
     self._socketIO = SocketIO('localhost', 3000)
@@ -70,6 +75,9 @@ class VolumioThread(Thread):
   def _on_queue_response(self, *args):
     self._volumio_queue = args[0]
 
+  def queue_is_not_empty(self):
+    return len(self._volumio_queue) > 0
+
   def get_status(self):
     return self._volumio_status
   
@@ -79,11 +87,17 @@ class VolumioThread(Thread):
   def is_playing(self):
     return self._volumio_status == 'play'
 
+  def is_on_pause(self):
+    return self._volumio_status == 'pause'
+
   def is_stopping(self):
     if self._volumio_status != 'stop':
       return False
     now = time.time()
     return (now - self._status_since) <= 5
+
+  def can_pause(self):
+    return self._volumio_service not in self.unpausable_services
 
   def get_playing_track(self):
     parts = []
@@ -167,10 +181,22 @@ class VolumioThread(Thread):
       self._socketIO.emit('seek',seek-seconds)
 
   def toggle_play_stop(self):
-    if self._volumio_status != 'play':
+    if not self.is_playing():
       self._socketIO.emit('play')
     else:
       self._socketIO.emit('stop')
+
+  def resume(self):
+    if not self.is_playing():
+      self._socketIO.emit('play')
+
+  def stop(self):
+    if self._volumio_status != 'stop':
+      self._socketIO.emit('stop')
+  
+  def pause(self):
+    if self._volumio_status == 'play':
+      self._socketIO.emit('pause')
 
   def get_current_service(self):
     return self._volumio_service

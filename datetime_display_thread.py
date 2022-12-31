@@ -4,18 +4,22 @@ from volumio_thread import VolumioThread
 from datetime import datetime
 import pytz
 import time
+import math
 
-class BasicStateThread(Thread):
+class DatetimeDisplayThread(Thread):
 
-  def __init__(self, volumio:VolumioThread, display:DisplayState):
+  def __init__(self, display:DisplayState, stop_event:Event):
     super().__init__()
-    self._volumio = volumio
     self._display = display
     self._clock_tick = True
-    self._latest_volumio_status = self._volumio.get_status()
-
+    self._latest_timestamp = None
+    self._stop_event = stop_event
+  
   def _display_datetime(self):
-    self._clock_tick = not self._clock_tick
+    now = math.ceil(time.time())
+    if now != self._latest_timestamp:
+      self._latest_timestamp = now
+      self._clock_tick = not self._clock_tick
     separator = "." if self._clock_tick else ""
     now = datetime.now(pytz.timezone("America/Toronto"))
     day = now.strftime('%-d').rjust(2,' ')
@@ -25,7 +29,6 @@ class BasicStateThread(Thread):
     self._display.set_persistent_texts([' '+day+'.'+month+'  '+hours+separator+minutes+' '])
 
   def run(self):
-    while True:
-      time.sleep(1)
-      if not self._volumio.is_playing():
-        self._display_datetime()
+    while not self._stop_event.is_set():
+      self._display_datetime()
+      time.sleep(0.25)
