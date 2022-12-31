@@ -34,20 +34,18 @@ class VolumioThread(Thread):
   def _on_state_response(self, *args):
     state = args[0]
     self._estimate_volumio_seek(state,self._volumio_title, self._volumio_artist)
-    volume = state.get('volume', 0)
-    if volume == '':
-      volume = 0
+    volume = state.get('volume', 0) or 0
     self._volumio_volume = int(volume)
     status = state.get('status','stop')
     if self._volumio_status != status:
       self._volumio_status = status
       self._status_since = time.time()
     self._volumio_status = status
-    self._volumio_artist = state.get('artist', '').strip()
-    self._volumio_title = state.get('title', '').strip()
-    self._volumio_service = state.get('service', '').strip()
+    self._volumio_artist = (state.get('artist', '') or '').strip()
+    self._volumio_title = (state.get('title', '') or '').strip()
+    self._volumio_service = (state.get('service', '') or '').strip()
     self._volumio_queue_position = state.get('position', 0)
-    self._volumio_track_type = state.get('trackType', '').strip()
+    self._volumio_track_type = (state.get('trackType', '') or '').strip()
     self._volumio_duration = state.get('duration', 0)
   
   def _estimate_volumio_seek(self, new_state, prev_title, prev_artist):

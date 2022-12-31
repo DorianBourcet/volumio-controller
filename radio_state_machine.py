@@ -34,9 +34,10 @@ class RadioStateMachine(object):
     self.machine = HierarchicalMachine(
       model=self,
       states=RadioStateMachine.states,
-      initial='sleeping',
+      initial='initializing',
       transitions=RadioStateMachine.transitions
     )
+    self.machine.set_state('sleeping')
   
   def _issue_new_persistent_display_stop_event(self):
     self._latest_persistent_display_stop_event.set()
