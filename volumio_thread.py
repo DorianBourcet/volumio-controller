@@ -6,7 +6,7 @@ import math
 
 class VolumioThread(Thread):
 
-  unpausable_services = [
+  linear_broadcast_service = [
     'metaradio',
     'webradio',
   ]
@@ -26,6 +26,7 @@ class VolumioThread(Thread):
     self._volumio_track_type = ''
     self._volumio_duration = 0
     self._status_since = time.time()
+    self._state_updated_on = time.time()
   
   def _init_socketIO(self):
     self._socketIO = SocketIO('localhost', 3000)
@@ -48,7 +49,8 @@ class VolumioThread(Thread):
 
   def _on_state_response(self, *args):
     state = args[0]
-    self._estimate_volumio_seek(state,self._volumio_title, self._volumio_artist)
+    self._state_updated_on = time.time()
+    #self._estimate_volumio_seek(state,self._volumio_title, self._volumio_artist)
     volume = state.get('volume', 0) or 0
     self._volumio_volume = int(volume)
     status = state.get('status','stop')
@@ -61,6 +63,7 @@ class VolumioThread(Thread):
     self._volumio_service = (state.get('service', '') or '').strip()
     self._volumio_queue_position = state.get('position', 0)
     self._volumio_track_type = (state.get('trackType', '') or '').strip()
+    self._volumio_seek = math.floor((state.get('seek', 0) or 0)/1000)
     self._volumio_duration = state.get('duration', 0)
   
   def _estimate_volumio_seek(self, new_state, prev_title, prev_artist):
@@ -82,7 +85,7 @@ class VolumioThread(Thread):
     else:
       self._volumio_spotify_seek = None
       self._volumio_spotify_seek_time = None
-      self._volumio_seek = math.ceil(new_state.get('seek', 0)/1000)
+      self._volumio_seek = math.floor(new_state.get('seek', 0)/1000)
         
 
   def _on_queue_response(self, *args):
@@ -112,8 +115,8 @@ class VolumioThread(Thread):
     now = time.time()
     return (now - self._status_since) <= 5
 
-  def can_pause(self):
-    return self._volumio_service not in self.unpausable_services
+  def is_interactive_broadcast(self) -> bool:
+    return self._volumio_service not in self.linear_broadcast_service
 
   def get_playing_track(self):
     parts = []
@@ -181,17 +184,23 @@ class VolumioThread(Thread):
       else:
         elapsed = time.time() - self._volumio_spotify_seek_time
         return int(elapsed + self._volumio_spotify_seek)
-    return int(self._volumio_seek)
+    elapsed_since_last_update = math.floor(time.time() - self._state_updated_on)
+    total_elapsed = self._volumio_seek + elapsed_since_last_update
+    return min(self._volumio_duration,total_elapsed)
   
   def get_duration(self):
     return self._volumio_duration
 
   def seek_up(self, seconds: int = 15):
+    if not self.is_interactive_broadcast():
+      return
     seek = self.get_seek()
     if self._volumio_duration - seek > seconds:
       self._socketIO.emit('seek',seek+seconds)
   
   def seek_down(self, seconds: int = 15):
+    if not self.is_interactive_broadcast():
+      return
     seek = self.get_seek()
     if seek > seconds:
       self._socketIO.emit('seek',seek-seconds)

@@ -4,6 +4,7 @@ from display_state import DisplayState
 from playing_track_display_thread import PlayingTrackDisplayThread
 from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
+from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from threading import Event
 import time
 
@@ -29,7 +30,7 @@ class RadioStateMachine(object):
     { 'trigger': 'back_home', 'source': '*', 'dest': 'home' },
     { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
     { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
-    { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_pause', 'conditions': 'can_pause' },
+    { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_holding', 'conditions': 'can_pause' },
     { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping'},
   ]
 
@@ -37,6 +38,7 @@ class RadioStateMachine(object):
     self._volumio = volumio
     self._display = display
     self._latest_persistent_display_stop_event = Event()
+    self._latest_temporary_display_stop_event = Event()
     self._latest_active_to_quiet_stop_event = Event()
     self._quiet_event = Event()
     self._last_input_time = time.time()
@@ -46,13 +48,14 @@ class RadioStateMachine(object):
       initial='connecting',
       transitions=RadioStateMachine.transitions
     )
-    active_to_quiet_thread = ActiveToQuietDisplayThread(self._display,self._latest_active_to_quiet_stop_event,self._quiet_event)
-    active_to_quiet_thread.daemon = True
-    active_to_quiet_thread.start()
   
   def _issue_new_persistent_display_stop_event(self):
     self._latest_persistent_display_stop_event.set()
     self._latest_persistent_display_stop_event = Event()
+  
+  def _issue_new_temporary_display_stop_event(self):
+    self._latest_temporary_display_stop_event.set()
+    self._latest_temporary_display_stop_event = Event()
 
   def _issue_new_active_to_quiet_stop_event(self):
     self._latest_active_to_quiet_stop_event.set()
@@ -102,13 +105,14 @@ class RadioStateMachine(object):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
 
   def can_pause(self):
-    return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.can_pause())
+    return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
 
   def user_input_1_right(self):
     if self._is_quiet():
       self._wake_up()
       return
     self._wake_up()
+    self._issue_new_temporary_display_stop_event()
     self._volumio.volume_up()
     self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
   
@@ -117,8 +121,31 @@ class RadioStateMachine(object):
       self._wake_up()
       return
     self._wake_up()
+    self._issue_new_temporary_display_stop_event()
     self._volumio.volume_down()
     self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
+
+  def user_input_2_right(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    self._volumio.seek_up()
+    self._issue_new_temporary_display_stop_event()
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
+    track_elapsed.daemon = True
+    track_elapsed.start()
+
+  def user_input_2_left(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    self._volumio.seek_down()
+    self._issue_new_temporary_display_stop_event()
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
+    track_elapsed.daemon = True
+    track_elapsed.start()
 
   def user_input_4_right(self):
     if self._is_quiet():

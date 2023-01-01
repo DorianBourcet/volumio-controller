@@ -38,11 +38,9 @@ class MainThread(Thread):
         if self._user_input1.released():
           print("Button 1 released")
         if self._user_input2.turned_right():
-          self._volumio.seek_up()
-          self._display.display_temporary_texts(['+ 15 sec'])
+          self._radio.user_input_2_right()
         if self._user_input2.turned_left():
-          self._volumio.seek_down()
-          self._display.display_temporary_texts(['- 15 sec'])
+          self._radio.user_input_2_left()
         if self._user_input2.pressed():
           print("Button 2 pressed")
         if self._user_input2.released():
