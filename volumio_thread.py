@@ -176,14 +176,14 @@ class VolumioThread(Thread):
     self._socketIO.emit('prev')
 
   def get_seek(self):
-    if self._volumio_status == 'stop':
+    """if self._volumio_status == 'stop':
       return 0
     if self._volumio_service == 'spop':
       if self._volumio_status == 'pause':
         return int(self._volumio_spotify_seek)
       else:
         elapsed = time.time() - self._volumio_spotify_seek_time
-        return int(elapsed + self._volumio_spotify_seek)
+        return int(elapsed + self._volumio_spotify_seek)"""
     elapsed_since_last_update = math.floor(time.time() - self._state_updated_on)
     total_elapsed = self._volumio_seek + elapsed_since_last_update
     return min(self._volumio_duration,total_elapsed)
