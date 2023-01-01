@@ -15,6 +15,7 @@ class VolumioThread(Thread):
     super().__init__()
     self._socketIO = None
     self._connected = False
+    self._volumio_volatile = False
     self._volumio_status = 'stop'
     self._volumio_volume = 0
     self._volumio_artist = ''
@@ -65,6 +66,7 @@ class VolumioThread(Thread):
     self._volumio_track_type = (state.get('trackType', '') or '').strip()
     self._volumio_seek = math.floor((state.get('seek', 0) or 0)/1000)
     self._volumio_duration = state.get('duration', 0)
+    self._volumio_volatile = state.get('volatile', False)
   
   def _estimate_volumio_seek(self, new_state, prev_title, prev_artist):
     if new_state.get('service') == 'spop':
@@ -186,7 +188,7 @@ class VolumioThread(Thread):
         return int(elapsed + self._volumio_spotify_seek)"""
     elapsed_since_last_update = math.floor(time.time() - self._state_updated_on)
     total_elapsed = self._volumio_seek + elapsed_since_last_update
-    return min(self._volumio_duration,total_elapsed)
+    return total_elapsed
   
   def get_duration(self):
     return self._volumio_duration
@@ -205,15 +207,12 @@ class VolumioThread(Thread):
     if seek > seconds:
       self._socketIO.emit('seek',seek-seconds)
 
-  def toggle_play_stop(self):
-    if not self.is_playing():
-      self._socketIO.emit('play')
-    else:
-      self._socketIO.emit('stop')
-
   def resume(self):
     if not self.is_playing():
-      self._socketIO.emit('play')
+      if self._volumio_volatile:
+        self._socketIO.emit('volatilePlay')
+      else:
+        self._socketIO.emit('play')
 
   def stop(self):
     if self._volumio_status != 'stop':

@@ -5,6 +5,7 @@ from playing_track_display_thread import PlayingTrackDisplayThread
 from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
+from holding_track_elapsed_time_display_thread import HoldingTrackElapsedTimeDisplayThread
 from threading import Event
 import time
 
@@ -93,6 +94,10 @@ class RadioStateMachine(object):
 
   def on_enter_home_holding(self):
     self._volumio.pause()
+    self._issue_new_persistent_display_stop_event()
+    holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
+    holding_track_thread.daemon = True
+    holding_track_thread.start()
 
   def on_enter_home_sleeping(self):
     self._volumio.stop()
@@ -146,6 +151,17 @@ class RadioStateMachine(object):
     track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
     track_elapsed.daemon = True
     track_elapsed.start()
+
+  def user_input_2_released(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    state = self.state
+    if state == 'home_playing' and self.can_pause():
+      self.pause_track()
+    elif state == 'home_holding':
+      self.play_track()
 
   def user_input_4_right(self):
     if self._is_quiet():

@@ -14,15 +14,15 @@ class MainThread(Thread):
     self._user_input1 = UserInput(0x36)
     self._user_input2 = UserInput(0x37)
     self._user_input4 = UserInput(0x3a)
-    self._display = DisplayState()
-    self._display.display_temporary_texts(['ROSS x Volumio'])
+    display = DisplayState()
+    display.display_temporary_texts(['ROSS x Volumio'])
     self._volumio = VolumioThread()
     self._volumio.daemon = True
     self._volumio.start()
-    self._radio = RadioStateMachine(self._volumio,self._display)
-    self._vigie = VigieThread(self._volumio,self._radio)
-    self._vigie.daemon = True
-    self._vigie.start()
+    self._radio = RadioStateMachine(self._volumio,display)
+    vigie = VigieThread(self._volumio,self._radio)
+    vigie.daemon = True
+    vigie.start()
 
   def run(self):
     while True:
@@ -44,8 +44,7 @@ class MainThread(Thread):
         if self._user_input2.pressed():
           print("Button 2 pressed")
         if self._user_input2.released():
-          self._volumio.toggle_play_stop()
-          print("Button 2 released")
+          self._radio.user_input_2_released()
         if self._user_input4.turned_right():
           self._radio.user_input_4_right()
         if self._user_input4.turned_left():
