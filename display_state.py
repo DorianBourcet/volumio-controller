@@ -4,6 +4,7 @@ import adafruit_ht16k33.segments
 from threading import Event
 from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
+from blinking_persistent_display_thread import BlinkingPersistentDisplayThread
 from threading import Event
 
 class DisplayState:
@@ -16,6 +17,8 @@ class DisplayState:
     self._latest_stop_event = Event()
     self.displaying_persistent = False
     self.persistent_texts = ['...']
+    self._blink_persistent_text = False
+    self.blink_delay = 1.0
     self.temporary_text_duration = None
     self.temporary_texts = []
     self._overlay = None
@@ -38,14 +41,26 @@ class DisplayState:
 
   def display_persistent_texts(self):
     self.displaying_persistent = True
-    self._print(PersistentDisplayThread(self,self._latest_stop_event))
+    if self._blink_persistent_text:
+      self._print(BlinkingPersistentDisplayThread(self,self._latest_stop_event))
+    else:
+      self._print(PersistentDisplayThread(self,self._latest_stop_event))
 
   def set_persistent_texts(self, texts: list):
+    self._blink_persistent_text = False
     if texts != self.persistent_texts:
       self.persistent_texts = texts
       if self.displaying_persistent:
         self._issue_new_stop_event()
         self.display_persistent_texts()
+  
+  def set_blinking_persistent_text(self, text: str, blink_delay: float=1.0):
+    self._blink_persistent_text = True
+    self.blink_delay = blink_delay
+    self.persistent_texts = [text]
+    if self.displaying_persistent:
+      self._issue_new_stop_event()
+      self.display_persistent_texts()
 
   def display_temporary_texts(self, texts: list, duration: float = None, marquee_trim_start: bool = False):
     self.displaying_persistent = False

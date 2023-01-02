@@ -7,6 +7,7 @@ from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from holding_track_elapsed_time_display_thread import HoldingTrackElapsedTimeDisplayThread
 from threading import Event
+from utils import format_elapsed_time_text
 import time
 
 class RadioStateMachine(object):
@@ -95,9 +96,12 @@ class RadioStateMachine(object):
   def on_enter_home_holding(self):
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
-    holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
+    """holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
     holding_track_thread.daemon = True
-    holding_track_thread.start()
+    holding_track_thread.start()"""
+    elapsed = self._volumio.get_seek()
+    duration = self._volumio.get_duration()
+    self._display.set_blinking_persistent_text(format_elapsed_time_text(elapsed,duration))
 
   def on_enter_home_sleeping(self):
     self._volumio.stop()
