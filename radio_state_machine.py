@@ -45,6 +45,7 @@ class RadioStateMachine(object):
     self._last_input_time = time.time()
     self.machine = HierarchicalMachine(
       model=self,
+      send_event=True,
       states=RadioStateMachine.states,
       initial='connecting',
       transitions=RadioStateMachine.transitions
@@ -72,12 +73,12 @@ class RadioStateMachine(object):
     active_to_quiet_thread.daemon = True
     active_to_quiet_thread.start()
   
-  def on_enter_connecting(self):
+  def on_enter_connecting(self, event):
     self._issue_new_active_to_quiet_stop_event()
     self._issue_new_persistent_display_stop_event()
     self._display.set_persistent_texts(['En attente de Volumio...'])
   
-  def on_enter_home(self):
+  def on_enter_home(self, event):
     if self._volumio.is_playing():
       self.play_track()
     elif self._volumio.is_on_pause():
@@ -85,31 +86,31 @@ class RadioStateMachine(object):
     elif self._volumio.has_status_stop():
       self.stop_track()
   
-  def on_enter_home_playing(self):
+  def on_enter_home_playing(self, event):
     self._volumio.resume()
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
     playing_track_thread.daemon = True
     playing_track_thread.start()
 
-  def on_enter_home_holding(self):
+  def on_enter_home_holding(self, event):
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
     holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
     holding_track_thread.daemon = True
     holding_track_thread.start()
 
-  def on_enter_home_sleeping(self):
+  def on_enter_home_sleeping(self, event):
     self._volumio.stop()
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
     datetime_thread.daemon = True
     datetime_thread.start()
   
-  def can_play(self):
+  def can_play(self, event):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
 
-  def can_pause(self):
+  def can_pause(self, event):
     return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
 
   def user_input_1_right(self):
