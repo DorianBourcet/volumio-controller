@@ -77,16 +77,25 @@ class RadioStateMachine(object):
     self._issue_new_active_to_quiet_stop_event()
     self._issue_new_persistent_display_stop_event()
     self._display.set_persistent_texts(['En attente de Volumio...'])
+
+  def _event_to_context(self, event) -> dict:
+    return {
+      'silent': event.kwargs.get('silent',True)
+    }
   
   def on_enter_home(self, event):
+    context = self._event_to_context(event)
     if self._volumio.is_playing():
-      self.play_track()
+      self.play_track(**context)
     elif self._volumio.is_on_pause():
-      self.pause_track()
+      self.pause_track(**context)
     elif self._volumio.has_status_stop():
-      self.stop_track()
+      self.stop_track(**context)
   
   def on_enter_home_playing(self, event):
+    context = self._event_to_context(event)
+    if not context['silent']:
+      self._display.display_temporary_texts(['LECTURE'])
     self._volumio.resume()
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -94,6 +103,9 @@ class RadioStateMachine(object):
     playing_track_thread.start()
 
   def on_enter_home_holding(self, event):
+    context = self._event_to_context(event)
+    if not context['silent']:
+      self._display.display_temporary_texts(['PAUSE'])
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
     holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -101,16 +113,19 @@ class RadioStateMachine(object):
     holding_track_thread.start()
 
   def on_enter_home_sleeping(self, event):
+    context = self._event_to_context(event)
+    if not context['silent']:
+      self._display.display_temporary_texts(['STOP'])
     self._volumio.stop()
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
     datetime_thread.daemon = True
     datetime_thread.start()
   
-  def can_play(self, event):
+  def can_play(self, event=None):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
 
-  def can_pause(self, event):
+  def can_pause(self, event=None):
     return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
 
   def user_input_1_right(self):
@@ -160,9 +175,9 @@ class RadioStateMachine(object):
     self._wake_up()
     state = self.state
     if state == 'home_playing' and self.can_pause():
-      self.pause_track()
+      self.pause_track(silent=False)
     elif state == 'home_holding':
-      self.play_track()
+      self.play_track(silent=False)
 
   def user_input_4_right(self):
     if self._is_quiet():
@@ -199,8 +214,8 @@ class RadioStateMachine(object):
     self._wake_up()
     state = self.state
     if state == 'home_playing':
-      self.stop_track()
+      self.stop_track(silent=False)
     elif state == 'home_holding':
-      self.play_track()
+      self.play_track(silent=False)
     elif state == 'home_sleeping':
-      self.play_track()
+      self.play_track(silent=False)
