@@ -45,10 +45,16 @@ class RadioStateMachine(object):
     self._last_input_time = time.time()
     self.machine = HierarchicalMachine(
       model=self,
+      send_event=True,
       states=RadioStateMachine.states,
       initial='connecting',
       transitions=RadioStateMachine.transitions
     )
+  
+  def _unpack_event(self, event) -> dict:
+    return {
+      'silent': event.kwargs.get('silent', False),
+    }
   
   def _issue_new_persistent_display_stop_event(self):
     self._latest_persistent_display_stop_event.set()
@@ -78,14 +84,26 @@ class RadioStateMachine(object):
     self._display.set_persistent_texts(['En attente de Volumio...'])
   
   def on_enter_home(self):
+    event = None
+    if event:
+      context = self._unpack_event(event)
+    else:
+      context = {}
     if self._volumio.is_playing():
-      self.play_track()
+      self.play_track(**context)
     elif self._volumio.is_on_pause():
-      self.pause_track()
+      self.pause_track(**context)
     elif self._volumio.has_status_stop():
-      self.stop_track()
+      self.stop_track(**context)
   
   def on_enter_home_playing(self):
+    event = None
+    if event:
+      context = self._unpack_event(event)
+    else:
+      context = {}
+    if not context.silent:
+      self._display.display_temporary_texts(['LECTURE'])
     self._volumio.resume()
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -93,6 +111,13 @@ class RadioStateMachine(object):
     playing_track_thread.start()
 
   def on_enter_home_holding(self):
+    event = None
+    if event:
+      context = self._unpack_event(event)
+    else:
+      context = {}
+    if not context.silent:
+      self._display.display_temporary_texts(['PAUSE'])
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
     holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -100,6 +125,13 @@ class RadioStateMachine(object):
     holding_track_thread.start()
 
   def on_enter_home_sleeping(self):
+    event = None
+    if event:
+      context = self._unpack_event(event)
+    else:
+      context = {}
+    if not context.silent:
+      self._display.display_temporary_texts(['STOP'])
     self._volumio.stop()
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
