@@ -9,6 +9,7 @@ class DisplayThread(Thread):
     super().__init__()
     self._display_state = display_state
     self._stop_event = stop_event
+    self._sleep_delay = 0.20
     self._ran_marquee = False
 
   def _get_texts(self) -> list:
@@ -17,7 +18,7 @@ class DisplayThread(Thread):
   def _get_duration(self, length: int) -> float:
     return 2.0+(length/12)
 
-  def _get_length(text:str):
+  def _get_length(self, text:str):
     return len(re.findall('(?!^\.)([^\.]\.|[^\.]|\.)', text))
 
   def _print(self, text: str):
@@ -61,7 +62,7 @@ class DisplayThread(Thread):
     for text in self._get_texts():
       if self._stop_event.is_set():
         return
-      length = DisplayThread._get_length(text)
+      length = self._get_length(text)
       if length <= 12:
         self._pretty_print(text,length)
       else:

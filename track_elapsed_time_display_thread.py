@@ -2,7 +2,7 @@ from threading import Thread, Event
 from display_state import DisplayState
 from volumio_thread import VolumioThread
 import time
-from utils import format_elapsed_time_text
+from utils import format_min_sec
 
 class TrackElapsedTimeDisplayThread(Thread):
 
@@ -15,7 +15,13 @@ class TrackElapsedTimeDisplayThread(Thread):
   def _produce_elapsed_time_text(self) -> str:
     elapsed = self._volumio.get_seek()
     duration = self._volumio.get_duration()
-    return format_elapsed_time_text(elapsed,duration)
+    if duration != 0 and elapsed <= duration:
+      percentage = round(elapsed / duration * 100)
+    else:
+      percentage = ''
+    elapsed_text = format_min_sec(elapsed).rjust(6,' ')
+    percentage_text = str(percentage).rjust(3,' ')
+    return ' '+elapsed_text+'  '+percentage_text+' '
   
   def run(self):
     pass
