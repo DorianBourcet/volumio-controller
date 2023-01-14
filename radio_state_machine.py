@@ -185,17 +185,6 @@ class RadioStateMachine(object):
     elif state == 'home_holding':
       self.play_track(silent=False)
 
-  def user_input_4_right_old(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
-    next_track_text = self._volumio.get_next_track()
-    if next_track_text is None:
-      next_track_text = '    SUIV >  '
-    self._display.display_temporary_texts([next_track_text],None,True)
-    self._volumio.next_track()
-
   def user_input_4_right(self):
     if self._is_quiet():
       self._wake_up()
@@ -214,15 +203,17 @@ class RadioStateMachine(object):
       self._volumio.next_track()
   
   def user_input_4_left(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
-    previous_track_text = self._volumio.get_previous_track()
-    if previous_track_text is None:
-      previous_track_text = '  < PREC    '
-    self._display.display_temporary_texts([previous_track_text],None,True)
-    self._volumio.previous_track()
+    if self._volumio.queue_is_not_empty():
+      idx = self._volumio.selected_index_previous()
+      name = self._volumio.get_track(idx)
+      self._display.display_temporary_texts([name],None,True)
+      self._issue_new_track_selector_stop_event()
+      track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
+      track_selector.daemon = True
+      track_selector.start()
+    else:
+      self._display.display_temporary_texts(['  < PREC    '],None,True)
+      self._volumio.previous_track()
 
   def user_input_4_pressed(self):
     if self._is_quiet():

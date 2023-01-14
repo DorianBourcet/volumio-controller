@@ -216,6 +216,13 @@ class VolumioThread(Thread):
       next_selected_index = 0
     self._selected_index = next_selected_index
     return self._selected_index
+  
+  def selected_index_previous(self):
+    previous_selected_index = self._selected_index - 1
+    if previous_selected_index < 0:
+      previous_selected_index = len(self._volumio_queue) - 1
+    self._selected_index = previous_selected_index
+    return self._selected_index
 
   def resume(self):
     if not self.is_playing():
