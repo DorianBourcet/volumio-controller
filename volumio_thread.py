@@ -145,26 +145,14 @@ class VolumioThread(Thread):
       self._socketIO.emit('volume', volume)
 
   def get_next_track(self) -> str:
-    try:
-      current_position = self._volumio_queue_position
-      next_position = current_position + 1
-      next_track = self._volumio_queue[next_position]
-      if self._volumio_service != next_track['service']:
-        return None
-      return next_track.get('title', next_track.get('name'))
-    except:
-      return None
+    current_position = self._volumio_queue_position
+    next_position = current_position + 1
+    return self.get_track(next_position)
 
   def get_previous_track(self) -> str:
-    try:
-      current_position = self._volumio_queue_position
-      previous_position = current_position - 1
-      previous_track = self._volumio_queue[previous_position]
-      if self._volumio_service != previous_track['service']:
-        return None
-      return previous_track.get('title', previous_track.get('name'))
-    except:
-      return None
+    current_position = self._volumio_queue_position
+    previous_position = current_position - 1
+    return self.get_track(previous_position)
   
   def next_track(self):
     self._volumio_queue_position += 1
@@ -177,7 +165,16 @@ class VolumioThread(Thread):
     self._volumio_queue_position -= 1
     self._socketIO.emit('prev')
   
-  def play_index(self, index: int):
+  def get_track(self, index: int):
+    try:
+      track = self._volumio_queue[index]
+      if self._volumio_service != track['service']:
+        return None
+      return track.get('title', track.get('name'))
+    except:
+      return None
+  
+  def play_track(self, index: int):
     self._socketIO.emit('play',{'value': index})
 
   def get_seek(self):
