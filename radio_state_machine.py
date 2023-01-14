@@ -169,6 +169,9 @@ class RadioStateMachine(object):
     track_elapsed.start()
 
   def user_input_2_released(self):
+    # TODO
+    self._volumio.play_index(23)
+    return
     if self._is_quiet():
       self._wake_up()
       return

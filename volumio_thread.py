@@ -176,6 +176,9 @@ class VolumioThread(Thread):
       self._socketIO.emit('prev')
     self._volumio_queue_position -= 1
     self._socketIO.emit('prev')
+  
+  def play_index(self, index: int):
+    self._socketIO.emit('play',{'value': index})
 
   def get_seek(self):
     """if self._volumio_status == 'stop':
