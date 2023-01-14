@@ -6,6 +6,7 @@ from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from holding_track_elapsed_time_display_thread import HoldingTrackElapsedTimeDisplayThread
+from track_selector_thread import TrackSelectorThread
 from threading import Event
 import time
 
@@ -41,6 +42,7 @@ class RadioStateMachine(object):
     self._latest_persistent_display_stop_event = Event()
     self._latest_temporary_display_stop_event = Event()
     self._latest_active_to_quiet_stop_event = Event()
+    self._latest_track_selector_stop_event = Event()
     self._quiet_event = Event()
     self._last_input_time = time.time()
     self.machine = HierarchicalMachine(
@@ -62,6 +64,10 @@ class RadioStateMachine(object):
   def _issue_new_active_to_quiet_stop_event(self):
     self._latest_active_to_quiet_stop_event.set()
     self._latest_active_to_quiet_stop_event = Event()
+  
+  def _issue_new_track_selector_stop_event(self):
+    self._latest_track_selector_stop_event.set()
+    self._latest_track_selector_stop_event = Event()
 
   def _is_quiet(self):
     now = time.time()
@@ -179,7 +185,7 @@ class RadioStateMachine(object):
     elif state == 'home_holding':
       self.play_track(silent=False)
 
-  def user_input_4_right(self):
+  def user_input_4_right_old(self):
     if self._is_quiet():
       self._wake_up()
       return
@@ -189,6 +195,23 @@ class RadioStateMachine(object):
       next_track_text = '    SUIV >  '
     self._display.display_temporary_texts([next_track_text],None,True)
     self._volumio.next_track()
+
+  def user_input_4_right(self):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    if self._volumio.queue_is_not_empty():
+      idx = self._volumio.selected_index_next()
+      name = self._volumio.get_track(idx)
+      self._display.display_temporary_texts([name],None,True)
+      self._issue_new_track_selector_stop_event()
+      track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
+      track_selector.daemon = True
+      track_selector.start()
+    else:
+      self._display.display_temporary_texts(['    SUIV >  '],None,True)
+      self._volumio.next_track()
   
   def user_input_4_left(self):
     if self._is_quiet():

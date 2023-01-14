@@ -28,6 +28,7 @@ class VolumioThread(Thread):
     self._volumio_duration = 0
     self._status_since = time.time()
     self._state_updated_on = time.time()
+    self._selected_index = 0
   
   def _init_socketIO(self):
     self._socketIO = SocketIO('localhost', 3000)
@@ -62,7 +63,9 @@ class VolumioThread(Thread):
     self._volumio_artist = (state.get('artist', '') or '').strip()
     self._volumio_title = (state.get('title', '') or '').strip()
     self._volumio_service = (state.get('service', '') or '').strip()
-    self._volumio_queue_position = state.get('position', 0)
+    if self._volumio_queue_position != state.get('position', 0):
+      self._volumio_queue_position = state.get('position', 0)
+      self._selected_index = state.get('position', 0)
     self._volumio_track_type = (state.get('trackType', '') or '').strip()
     self._volumio_seek = math.floor((state.get('seek', 0) or 0)/1000)
     self._volumio_duration = state.get('duration', 0)
@@ -206,6 +209,13 @@ class VolumioThread(Thread):
     seek = self.get_seek()
     if seek > seconds:
       self._socketIO.emit('seek',seek-seconds)
+
+  def selected_index_next(self):
+    next_selected_index = self._selected_index + 1
+    if next_selected_index >= len(self._volumio_queue):
+      next_selected_index = 0
+    self._selected_index = next_selected_index
+    return self._selected_index
 
   def resume(self):
     if not self.is_playing():
