@@ -47,7 +47,7 @@ class DisplayState:
         self._issue_new_stop_event()
         self.display_persistent_texts()
 
-  def display_temporary_texts(self, texts: list, duration: float = None, marquee_trim_start: bool = False):
+  def display_temporary_texts(self, texts: list, duration: float = None, marquee_trim_start: bool = False, animate_first: bool = False):
     self.displaying_persistent = False
     self.temporary_texts = texts
     if duration:
@@ -55,5 +55,5 @@ class DisplayState:
     else:
       self.temporary_text_duration = None
     self._issue_new_stop_event()
-    self._print(TemporaryDisplayThread(self,self._latest_stop_event, marquee_trim_start))
+    self._print(TemporaryDisplayThread(self,self._latest_stop_event, marquee_trim_start, animate_first))
 

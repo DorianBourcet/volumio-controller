@@ -6,11 +6,12 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, stop_event: Event):
+  def __init__(self, display_state, stop_event: Event, animate_first:bool=False):
     super().__init__()
     self._display_state = display_state
     self._stop_event = stop_event
-    self._sleep_delay = 0.20
+    self._animate_first = animate_first
+    self._animated_first = False
     self._ran_marquee = False
 
   def _get_texts(self) -> list:
@@ -22,16 +23,28 @@ class DisplayThread(Thread):
   def _print(self, text: str):
     self._display_state.display.print(unidecode(text.upper()))
 
+  def _animate(self, text: str):
+    self._print(text)
+    text = utils.split_text(text)
+    time.sleep(0.03)
+    for i in range(len(text)):
+      str = ''.join(text[:i]) + ' ' + ''.join(text[i+1:])
+      self._print(str)
+      time.sleep(0.03)
+
   def _on_marquee_must_trim_start(self):
     return False
 
-  def _pretty_print(self, text: str, length: int):
+  def _pretty_print(self, text: str, length: int, animate: bool):
     duration = self._get_duration(length)
     total_spaces = 12-length
     after_spaces = total_spaces//2
     before_spaces = total_spaces-after_spaces
-    self._print(' '*before_spaces+text+' '*after_spaces)
+    full_text = ' '*before_spaces+text+' '*after_spaces
     start = time.time()
+    if animate:
+      self._animate(full_text)
+    self._print(full_text)
     now = start
     while not self._stop_event.is_set() and now <= start+duration:
       time.sleep(self._display_state.marquee_sleep_delay)
@@ -62,7 +75,12 @@ class DisplayThread(Thread):
         return
       length = utils.get_length(text)
       if length <= 12:
-        self._pretty_print(text,length)
+        if self._animate_first and not self._animated_first:
+          animate = True
+        else:
+          animate = False
+        self._pretty_print(text,length,animate)
+        self._animated_first = True
       else:
         self._pretty_marquee(text, self._on_marquee_must_trim_start())
     if not self._stop_event.is_set():

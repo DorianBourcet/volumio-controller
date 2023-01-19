@@ -3,8 +3,8 @@ from threading import Event
 
 class TemporaryDisplayThread(DisplayThread):
 
-  def __init__(self, display_state, stop_event: Event, marquee_trim_start: bool = False):
-    super().__init__(display_state,stop_event)
+  def __init__(self, display_state, stop_event: Event, marquee_trim_start: bool = False, animate_first:bool = False):
+    super().__init__(display_state,stop_event,animate_first)
     self._temporary_texts = display_state.temporary_texts
     self._duration = display_state.temporary_text_duration
     self._marquee_trim_start = marquee_trim_start
