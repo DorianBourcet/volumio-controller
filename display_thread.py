@@ -2,6 +2,7 @@ import re
 import time
 from threading import Thread, Event
 from unidecode import unidecode
+import utils
 
 class DisplayThread(Thread):
 
@@ -17,9 +18,6 @@ class DisplayThread(Thread):
 
   def _get_duration(self, length: int) -> float:
     return 2.0+(length/12)
-
-  def _get_length(self, text:str):
-    return len(re.findall('(?!^\.)([^\.]\.|[^\.]|\.)', text))
 
   def _print(self, text: str):
     self._display_state.display.print(unidecode(text.upper()))
@@ -62,7 +60,7 @@ class DisplayThread(Thread):
     for text in self._get_texts():
       if self._stop_event.is_set():
         return
-      length = self._get_length(text)
+      length = utils.get_length(text)
       if length <= 12:
         self._pretty_print(text,length)
       else:

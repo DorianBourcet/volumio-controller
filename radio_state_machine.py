@@ -9,6 +9,7 @@ from holding_track_elapsed_time_display_thread import HoldingTrackElapsedTimeDis
 from track_selector_thread import TrackSelectorThread
 from threading import Event
 import time
+import utils
 
 class RadioStateMachine(object):
 
@@ -192,7 +193,7 @@ class RadioStateMachine(object):
     self._wake_up()
     if self._volumio.queue_is_not_empty():
       idx = self._volumio.selected_index_next()
-      name = self._volumio.get_track(idx)
+      name = utils.shorten_text(self._volumio.get_track(idx))
       self._display.display_temporary_texts([name],None,True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
@@ -205,7 +206,7 @@ class RadioStateMachine(object):
   def user_input_4_left(self):
     if self._volumio.queue_is_not_empty():
       idx = self._volumio.selected_index_previous()
-      name = self._volumio.get_track(idx)
+      name = utils.shorten_text(self._volumio.get_track(idx))
       self._display.display_temporary_texts([name],None,True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
