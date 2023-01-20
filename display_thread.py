@@ -25,12 +25,16 @@ class DisplayThread(Thread):
 
   def _animate(self, text: str):
     self._print(text)
+    if self._stop_event.is_set():
+      return
     text = utils.split_text(text)
-    time.sleep(0.03)
+    time.sleep(0.01)
     for i in range(len(text)):
+      if self._stop_event.is_set():
+        return
       str = ''.join(text[:i]) + ' ' + ''.join(text[i+1:])
       self._print(str)
-      time.sleep(0.03)
+      time.sleep(0.01)
 
   def _on_marquee_must_trim_start(self):
     return False
@@ -42,8 +46,12 @@ class DisplayThread(Thread):
     before_spaces = total_spaces-after_spaces
     full_text = ' '*before_spaces+text+' '*after_spaces
     start = time.time()
+    if self._stop_event.is_set():
+      return
     if animate:
       self._animate(full_text)
+    if self._stop_event.is_set():
+      return
     self._print(full_text)
     now = start
     while not self._stop_event.is_set() and now <= start+duration:

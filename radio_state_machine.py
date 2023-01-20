@@ -102,7 +102,7 @@ class RadioStateMachine(object):
   def on_enter_home_playing(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['LECTURE'])
+      self._display.display_temporary_texts(['LECTURE'],None,False,True)
     self._volumio.resume()
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -112,7 +112,7 @@ class RadioStateMachine(object):
   def on_enter_home_holding(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['PAUSE'])
+      self._display.display_temporary_texts(['PAUSE'],None,False,True)
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
     holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -122,7 +122,7 @@ class RadioStateMachine(object):
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['STOP'])
+      self._display.display_temporary_texts(['STOP'],None,False,True)
     self._volumio.stop()
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
