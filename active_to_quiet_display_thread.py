@@ -4,7 +4,7 @@ import time
 
 class ActiveToQuietDisplayThread(Thread):
 
-  def __init__(self, display:DisplayState, stop_event:Event, quiet_event:Event, quiet_after_sec:int=60):
+  def __init__(self, display:DisplayState, stop_event:Event, quiet_event:Event, quiet_after_sec:int=30):
     super().__init__()
     self._display = display
     self._start = None

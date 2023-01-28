@@ -53,6 +53,7 @@ class RadioStateMachine(object):
       initial='connecting',
       transitions=RadioStateMachine.transitions
     )
+    self._wake_up()
   
   def _issue_new_persistent_display_stop_event(self):
     self._latest_persistent_display_stop_event.set()
@@ -71,7 +72,6 @@ class RadioStateMachine(object):
     self._latest_track_selector_stop_event = Event()
 
   def _is_quiet(self):
-    now = time.time()
     return self._quiet_event.is_set()
 
   def _wake_up(self):
@@ -81,7 +81,6 @@ class RadioStateMachine(object):
     active_to_quiet_thread.start()
   
   def on_enter_connecting(self, event):
-    self._issue_new_active_to_quiet_stop_event()
     self._issue_new_persistent_display_stop_event()
     self._display.set_persistent_texts(['En attente de Volumio...'])
 
@@ -200,7 +199,7 @@ class RadioStateMachine(object):
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text('  SUIV >')
+      self._display.display_temporary_text(text='  SUIV >',wave=True)
       self._volumio.next_track()
   
   def user_input_4_left(self):
@@ -213,7 +212,7 @@ class RadioStateMachine(object):
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text('< PREC  ')
+      self._display.display_temporary_text(text='< PREC  ',wave=True)
       self._volumio.previous_track()
 
   def user_input_4_pressed(self):
