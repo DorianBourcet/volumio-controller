@@ -26,18 +26,24 @@ class DisplayThread(Thread):
   def _animate(self, text: str):
     self._print(text)
     if self._stop_event.is_set():
-      return
+      return self._exiting()
     text = utils.split_text(text)
     time.sleep(0.01)
     for i in range(len(text)):
       if self._stop_event.is_set():
-        return
+        return self._exiting()
       str = ''.join(text[:i]) + ' ' + ''.join(text[i+1:])
       self._print(str)
       time.sleep(0.01)
 
   def _on_marquee_must_trim_start(self):
     return False
+
+  def _can_exit_while_printing(self) -> bool:
+    return True
+
+  def _should_exit_while_printing(self) -> bool:
+    return self._can_exit_while_printing() and self._stop_event.is_set()
 
   def _pretty_print(self, text: str, length: int, animate: bool):
     duration = self._get_duration(length)
@@ -46,15 +52,15 @@ class DisplayThread(Thread):
     before_spaces = total_spaces-after_spaces
     full_text = ' '*before_spaces+text+' '*after_spaces
     start = time.time()
-    if self._stop_event.is_set():
-      return
+    if self._should_exit_while_printing():
+      return self._exiting()
     if animate:
       self._animate(full_text)
-    if self._stop_event.is_set():
-      return
+    if self._should_exit_while_printing():
+      return self._exiting()
     self._print(full_text)
     now = start
-    while not self._stop_event.is_set() and now <= start+duration:
+    while not self._should_exit_while_printing and now <= start+duration:
       time.sleep(self._display_state.marquee_sleep_delay)
       now = time.time()
 
@@ -66,7 +72,7 @@ class DisplayThread(Thread):
     start = 0
     parts = re.findall('([^\.]\.|[^\.]|\.)', text)
     delay_start = trim_start
-    while not self._stop_event.is_set() and start < len(parts)-12:
+    while not self._should_exit_while_printing() and start < len(parts)-12:
       self._print(''.join(parts[start:start+12]))
       if delay_start:
         delay_start = False
@@ -74,13 +80,20 @@ class DisplayThread(Thread):
         start += 1
       time.sleep(self._display_state.marquee_sleep_delay)
 
+  def _starting(self):
+    pass
+
+  def _exiting(self):
+    pass
+
   def _after_run(self):
     pass
 
   def run(self):
+    self._starting()
     for text in self._get_texts():
       if self._stop_event.is_set():
-        return
+        return self._exiting()
       length = utils.get_length(text)
       if length <= 12:
         if self._wave and not self._waved:
@@ -91,5 +104,6 @@ class DisplayThread(Thread):
         self._waved = True
       else:
         self._pretty_marquee(text, self._on_marquee_must_trim_start())
+    self._exiting()
     if not self._stop_event.is_set():
       self._after_run()

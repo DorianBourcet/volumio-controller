@@ -1,7 +1,7 @@
 import board
 import busio as io
 import adafruit_ht16k33.segments
-from threading import Event
+from threading import Event, Lock
 from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
 from threading import Event
@@ -12,11 +12,12 @@ class DisplayState:
     i2c = io.I2C(board.SCL, board.SDA)
     self.display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
     self._latest_stop_event = Event()
+    self._latest_quiet_stop_event = Event()
+    self._persistent_lock = Lock()
     self.displaying_persistent = False
     self.persistent_texts = ['...']
     self.temporary_text_duration = None
     self.temporary_text = None
-    self._overlay = None
     self.set_quiet_mode()
   
   def _print(self, display_thread):
@@ -26,6 +27,10 @@ class DisplayState:
   def _issue_new_stop_event(self):
     self._latest_stop_event.set()
     self._latest_stop_event = Event()
+
+  def _issue_new_quiet_stop_event(self):
+    self._latest_quiet_stop_event.set()
+    self._latest_quiet_stop_event = Event()
 
   def set_quiet_mode(self):
     self.display.brightness = 0.05
@@ -37,12 +42,18 @@ class DisplayState:
 
   def display_persistent_texts(self):
     self.displaying_persistent = True
-    self._print(PersistentDisplayThread(self,self._latest_stop_event))
+    self._print(PersistentDisplayThread(self,self._persistent_lock,self._latest_stop_event,self._latest_quiet_stop_event))
 
-  def set_persistent_texts(self, texts: list):
+  def smoothly_move_to_persistent_texts(self, texts: list):
+    self.set_persistent_texts(texts,True)
+    if self.displaying_persistent:
+      self._issue_new_quiet_stop_event()
+      self._print(PersistentDisplayThread(self,self._persistent_lock,self._latest_stop_event,self._latest_quiet_stop_event))
+
+  def set_persistent_texts(self, texts: list, only_set=False):
     if texts != self.persistent_texts:
       self.persistent_texts = texts
-      if self.displaying_persistent:
+      if self.displaying_persistent and not only_set:
         self._issue_new_stop_event()
         self.display_persistent_texts()
 
