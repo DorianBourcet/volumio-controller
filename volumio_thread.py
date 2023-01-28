@@ -177,6 +177,9 @@ class VolumioThread(Thread):
     except:
       return None
   
+  def can_browse_queue(self) -> bool:
+    return self._volumio_service != 'spop' and self.queue_is_not_empty()
+  
   def play_track(self, index: int):
     self._socketIO.emit('play',{'value': index})
 
