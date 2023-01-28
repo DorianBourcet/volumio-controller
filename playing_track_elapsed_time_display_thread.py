@@ -13,5 +13,5 @@ class PlayingTrackElapsedTimeDisplayThread(TrackElapsedTimeDisplayThread):
   def run(self):
     start = time.time()
     while not self._stop_event.is_set() and time.time() - start <= self._duration:
-      self._display.display_temporary_texts([self._produce_elapsed_time_text()],0.25)
+      self._display.display_temporary_text(self._produce_elapsed_time_text(),0.25)
       time.sleep(0.25)

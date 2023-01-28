@@ -3,14 +3,14 @@ from threading import Event
 
 class TemporaryDisplayThread(DisplayThread):
 
-  def __init__(self, display_state, stop_event: Event, marquee_trim_start: bool = False, animate_first:bool = False):
-    super().__init__(display_state,stop_event,animate_first)
-    self._temporary_texts = display_state.temporary_texts
+  def __init__(self, display_state, stop_event: Event, marquee_trim_start: bool = False, wave:bool = False):
+    super().__init__(display_state,stop_event,wave)
+    self._temporary_text = display_state.temporary_text
     self._duration = display_state.temporary_text_duration
     self._marquee_trim_start = marquee_trim_start
 
   def _get_texts(self) -> list:
-    return self._temporary_texts
+    return [self._temporary_text]
 
   def _get_duration(self, length: int) -> float:
     if self._duration:

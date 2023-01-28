@@ -6,12 +6,12 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, stop_event: Event, animate_first:bool=False):
+  def __init__(self, display_state, stop_event: Event, wave:bool=False):
     super().__init__()
     self._display_state = display_state
     self._stop_event = stop_event
-    self._animate_first = animate_first
-    self._animated_first = False
+    self._wave = wave
+    self._waved = False
     self._ran_marquee = False
 
   def _get_texts(self) -> list:
@@ -83,12 +83,12 @@ class DisplayThread(Thread):
         return
       length = utils.get_length(text)
       if length <= 12:
-        if self._animate_first and not self._animated_first:
+        if self._wave and not self._waved:
           animate = True
         else:
           animate = False
         self._pretty_print(text,length,animate)
-        self._animated_first = True
+        self._waved = True
       else:
         self._pretty_marquee(text, self._on_marquee_must_trim_start())
     if not self._stop_event.is_set():

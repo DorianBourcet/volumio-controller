@@ -102,7 +102,7 @@ class RadioStateMachine(object):
   def on_enter_home_playing(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['LECTURE'],None,False,True)
+      self._display.display_temporary_text('LECTURE',None,False,True)
     self._volumio.resume()
     self._issue_new_persistent_display_stop_event()
     playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -112,7 +112,7 @@ class RadioStateMachine(object):
   def on_enter_home_holding(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['PAUSE'],None,False,True)
+      self._display.display_temporary_text('PAUSE',None,False,True)
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
     holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
@@ -122,7 +122,7 @@ class RadioStateMachine(object):
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
-      self._display.display_temporary_texts(['STOP'],None,False,True)
+      self._display.display_temporary_text('STOP',None,False,True)
     self._volumio.stop()
     self._issue_new_persistent_display_stop_event()
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
@@ -142,7 +142,7 @@ class RadioStateMachine(object):
     self._wake_up()
     self._issue_new_temporary_display_stop_event()
     self._volumio.volume_up()
-    self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
+    self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
   
   def user_input_1_left(self):
     if self._is_quiet():
@@ -151,7 +151,7 @@ class RadioStateMachine(object):
     self._wake_up()
     self._issue_new_temporary_display_stop_event()
     self._volumio.volume_down()
-    self._display.display_temporary_texts(['VOLUME '+str(self._volumio.get_volume())])
+    self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
 
   def user_input_2_right(self):
     if self._is_quiet():
@@ -194,26 +194,26 @@ class RadioStateMachine(object):
     if self._volumio.queue_is_not_empty():
       idx = self._volumio.selected_index_next()
       name = utils.shorten_text(self._volumio.get_track(idx))
-      self._display.display_temporary_texts([name],None,True)
+      self._display.display_temporary_text(name,None,True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_texts(['    SUIV >  '],None,True)
+      self._display.display_temporary_text('    SUIV >  ',None,True)
       self._volumio.next_track()
   
   def user_input_4_left(self):
     if self._volumio.queue_is_not_empty():
       idx = self._volumio.selected_index_previous()
       name = utils.shorten_text(self._volumio.get_track(idx))
-      self._display.display_temporary_texts([name],None,True)
+      self._display.display_temporary_text(name,None,True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_texts(['  < PREC    '],None,True)
+      self._display.display_temporary_text('  < PREC    ',None,True)
       self._volumio.previous_track()
 
   def user_input_4_pressed(self):

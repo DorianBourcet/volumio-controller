@@ -11,14 +11,13 @@ class DisplayState:
   def __init__(self):
     i2c = io.I2C(board.SCL, board.SDA)
     self.display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
-    self.display.brightness = 0.5
-    self.marquee_sleep_delay = 0.13
     self._latest_stop_event = Event()
     self.displaying_persistent = False
     self.persistent_texts = ['...']
     self.temporary_text_duration = None
-    self.temporary_texts = []
+    self.temporary_text = None
     self._overlay = None
+    self.set_quiet_mode()
   
   def _print(self, display_thread):
     display_thread.daemon = True
@@ -47,13 +46,13 @@ class DisplayState:
         self._issue_new_stop_event()
         self.display_persistent_texts()
 
-  def display_temporary_texts(self, texts: list, duration: float = None, marquee_trim_start: bool = False, animate_first: bool = False):
+  def display_temporary_text(self, text: str, duration: float = None, marquee_trim_start: bool = False, wave: bool = False):
     self.displaying_persistent = False
-    self.temporary_texts = texts
+    self.temporary_text = text
     if duration:
       self.temporary_text_duration = duration
     else:
       self.temporary_text_duration = None
     self._issue_new_stop_event()
-    self._print(TemporaryDisplayThread(self,self._latest_stop_event, marquee_trim_start, animate_first))
+    self._print(TemporaryDisplayThread(self,self._latest_stop_event, marquee_trim_start, wave))
 

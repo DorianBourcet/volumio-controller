@@ -15,7 +15,7 @@ class MainThread(Thread):
     self._user_input2 = UserInput(0x37)
     self._user_input4 = UserInput(0x3a)
     display = DisplayState()
-    display.display_temporary_texts(['ROSS x Volumio'])
+    display.display_temporary_text('ROSS x Volumio')
     self._volumio = VolumioThread()
     self._volumio.daemon = True
     self._volumio.start()
