@@ -6,16 +6,13 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, stop_event: Event, wave:bool=False):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, wave:bool=False):
     super().__init__()
     self._display_state = display_state
+    self._text_to_display = text_to_display
     self._stop_event = stop_event
     self._wave = wave
     self._waved = False
-    self._ran_marquee = False
-
-  def _get_texts(self) -> list:
-    pass
 
   def _get_duration(self, length: int) -> float:
     return 2.0+(length/12)
@@ -59,7 +56,6 @@ class DisplayThread(Thread):
       now = time.time()
 
   def _pretty_marquee(self, text: str, trim_start: bool = False):
-    self._ran_marquee = True
     text = text+' '*14
     if not trim_start:
       text = ' '*13+text
@@ -78,18 +74,17 @@ class DisplayThread(Thread):
     pass
 
   def run(self):
-    for text in self._get_texts():
-      if self._stop_event.is_set():
-        return
-      length = utils.get_length(text)
-      if length <= 12:
-        if self._wave and not self._waved:
-          animate = True
-        else:
-          animate = False
-        self._pretty_print(text,length,animate)
-        self._waved = True
+    if self._stop_event.is_set():
+      return
+    length = utils.get_length(self._text_to_display)
+    if length <= 12:
+      if self._wave and not self._waved:
+        animate = True
       else:
-        self._pretty_marquee(text, self._on_marquee_must_trim_start())
+        animate = False
+      self._pretty_print(self._text_to_display,length,animate)
+      self._waved = True
+    else:
+      self._pretty_marquee(self._text_to_display, self._on_marquee_must_trim_start())
     if not self._stop_event.is_set():
       self._after_run()
