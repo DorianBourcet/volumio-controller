@@ -19,5 +19,5 @@ class HoldingTrackElapsedTimeDisplayThread(TrackElapsedTimeDisplayThread):
       if now - self._last_blink >= 0.5:
         self._last_blink = now
         self._must_display_text = not self._must_display_text
-      self._display.set_persistent_texts([text if self._must_display_text else ''])
+      self._display.set_persistent_texts([text if self._must_display_text else ''],True)
       time.sleep(0.25)
