@@ -82,7 +82,7 @@ class RadioStateMachine(object):
   
   def on_enter_connecting(self, event):
     self._issue_new_persistent_display_stop_event()
-    self._display.set_persistent_texts(['En attente de Volumio...'],True)
+    self._display.display_persistent_texts(['En attente de Volumio...'])
 
   def _event_to_context(self, event) -> dict:
     return {

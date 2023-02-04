@@ -6,13 +6,15 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, wave:bool=False):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, quiet_stop_event: Event=None, wave:bool=False):
     super().__init__()
     self._display_state = display_state
     self._text_to_display = text_to_display
+    self._quiet_stop_event = quiet_stop_event
     self._stop_event = stop_event
     self._wave = wave
     self._waved = False
+    self._currently_printed = ''
 
   def _get_duration(self, length: int) -> float:
     return 2.0+(length/12)
@@ -49,7 +51,11 @@ class DisplayThread(Thread):
       self._animate(full_text)
     if self._stop_event.is_set():
       return
-    self._print(full_text)
+    self._currently_printed = full_text
+    if self._quiet_stop_event is not None and self._quiet_stop_event.is_set():
+        self._quiet_stop()
+        return
+    self._print(self._currently_printed)
     now = start
     while not self._stop_event.is_set() and now <= start+duration:
       time.sleep(self._display_state.marquee_sleep_delay)
@@ -63,12 +69,19 @@ class DisplayThread(Thread):
     parts = re.findall('([^\.]\.|[^\.]|\.)', text)
     delay_start = trim_start
     while not self._stop_event.is_set() and start < len(parts)-12:
-      self._print(''.join(parts[start:start+12]))
+      self._currently_printed = ''.join(parts[start:start+12])
+      if self._quiet_stop_event is not None and self._quiet_stop_event.is_set():
+        self._quiet_stop()
+        return
+      self._print(self._currently_printed)
       if delay_start:
         delay_start = False
       else:
         start += 1
       time.sleep(self._display_state.marquee_sleep_delay)
+    
+  def _quiet_stop(self):
+    self._pretty_marquee(self._currently_printed,True)
 
   def _after_run(self):
     pass

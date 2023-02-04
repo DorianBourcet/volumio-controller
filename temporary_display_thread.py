@@ -4,7 +4,7 @@ from threading import Event
 class TemporaryDisplayThread(DisplayThread):
 
   def __init__(self, display_state, text_to_display: str, stop_event: Event, marquee_trim_start: bool = False, wave:bool = False):
-    super().__init__(display_state,text_to_display,stop_event,wave)
+    super().__init__(display_state,text_to_display,stop_event,None,wave)
     self._duration = display_state.temporary_text_duration
     self._marquee_trim_start = marquee_trim_start
 

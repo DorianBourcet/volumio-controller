@@ -13,6 +13,7 @@ class DisplayState:
     i2c = io.I2C(board.SCL, board.SDA)
     self.display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
     self._latest_stop_event = Event()
+    self._latest_quiet_stop_event = Event()
     self.displaying_persistent = False
     self._persistent_texts = ['...']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
@@ -29,6 +30,10 @@ class DisplayState:
     self._latest_stop_event.set()
     self._latest_stop_event = Event()
 
+  def _issue_new_quiet_stop_event(self):
+    self._latest_quiet_stop_event.set()
+    self._latest_quiet_stop_event = Event()
+
   def set_quiet_mode(self):
     self.display.brightness = 0.05
     self.marquee_sleep_delay = 0.20
@@ -37,17 +42,20 @@ class DisplayState:
     self.display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
 
-  def display_persistent_texts(self):
+  def display_persistent_texts(self, texts: list = None):
+    if texts is not None:
+      self._issue_new_stop_event()
+      self.set_persistent_texts(texts)
+      return
     self.displaying_persistent = True
-    self._print(PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._latest_stop_event))
+    self._print(PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._latest_stop_event,self._latest_quiet_stop_event))
 
-  def set_persistent_texts(self, texts: list, break_previous: bool = False):
+  def set_persistent_texts(self, texts: list):
     if texts != self._persistent_texts:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)
-      if self.displaying_persistent and break_previous:
-        self._issue_new_stop_event()
-        self.display_persistent_texts()
+      if self.displaying_persistent:
+        self._issue_new_quiet_stop_event()
 
   def display_temporary_text(self, text: str, duration: float = None, marquee_trim_start: bool = False, wave: bool = False):
     self.displaying_persistent = False
