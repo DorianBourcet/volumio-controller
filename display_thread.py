@@ -18,7 +18,8 @@ class DisplayThread(Thread):
     return 2.0+(length/12)
 
   def _print(self, text: str):
-    self._display_state.display.print(unidecode(text.upper()))
+    upper = text.upper().replace('N°','no')
+    self._display_state.display.print(unidecode(upper))
 
   def _animate(self, text: str):
     self._print(text)
