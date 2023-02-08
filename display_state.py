@@ -41,11 +41,11 @@ class DisplayState:
     self.displaying_persistent = True
     self._print(PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._latest_stop_event))
 
-  def set_persistent_texts(self, texts: list, break_previous: bool = False):
+  def set_persistent_texts(self, texts: list):
     if texts != self._persistent_texts:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)
-      if self.displaying_persistent and break_previous:
+      if self.displaying_persistent:
         self._issue_new_stop_event()
         self.display_persistent_texts()
 

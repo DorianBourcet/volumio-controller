@@ -14,8 +14,7 @@ class PlayingTrackDisplayThread(Thread):
   def run(self):
     while not self._stop_event.is_set():
       if self._volumio.is_playing():
-        should_break = self._volumio.get_current_service() != 'metaradio'
-        self._display.set_persistent_texts(self._volumio.get_playing_track(),should_break)
+        self._display.set_persistent_texts(self._volumio.get_playing_track())
       else:
-        self._display.set_persistent_texts(['...'],True)
+        self._display.set_persistent_texts(['...'])
       time.sleep(0.25)
