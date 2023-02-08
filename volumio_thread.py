@@ -124,12 +124,12 @@ class VolumioThread(Thread):
     return self._volumio_service not in self.linear_broadcast_service
 
   def get_playing_track(self):
-    parts = []
+    parts = [
+      self._volumio_title,
+      self._volumio_artist,
+    ]
     if self._volumio_service == 'metaradio':
       parts.append(self._volumio_track_type)
-    title = self._volumio_title
-    artist = self._volumio_artist
-    parts.extend([title, artist])
     return [i for i in parts if i]
 
   def get_volume(self):
