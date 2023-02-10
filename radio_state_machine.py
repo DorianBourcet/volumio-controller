@@ -114,9 +114,10 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text='PAUSE',wave=True)
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
-    holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
-    holding_track_thread.daemon = True
-    holding_track_thread.start()
+    self._display.set_persistent_texts(['En pause...'])
+    # holding_track_thread = HoldingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
+    # holding_track_thread.daemon = True
+    # holding_track_thread.start()
 
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
