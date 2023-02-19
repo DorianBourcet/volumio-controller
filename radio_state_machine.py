@@ -113,7 +113,7 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text='PAUSE',wave=True)
     self._volumio.pause()
     self._issue_new_persistent_display_stop_event()
-    self._display.set_persistent_texts(['En pause.  ','En pause . ','En pause  .'])
+    self._display.set_persistent_texts(['En pause...'])
 
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
