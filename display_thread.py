@@ -38,7 +38,7 @@ class DisplayThread(Thread):
     return False
 
   def _pretty_print(self, text: str, length: int, animate: bool):
-    duration = self._get_duration(length)
+    duration = 3.0
     total_spaces = 12-length
     after_spaces = total_spaces//2
     before_spaces = total_spaces-after_spaces
