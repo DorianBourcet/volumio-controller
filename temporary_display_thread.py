@@ -8,7 +8,7 @@ class TemporaryDisplayThread(DisplayThread):
     self._duration = display_state.temporary_text_duration
     self._marquee_trim_start = marquee_trim_start
 
-  def _get_duration(self, length: int) -> float:
+  def _get_duration(self) -> float:
     return self._duration
 
   def _after_run(self):

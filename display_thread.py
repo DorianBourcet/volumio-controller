@@ -14,7 +14,7 @@ class DisplayThread(Thread):
     self._wave = wave
     self._waved = False
 
-  def _get_duration(self, length: int) -> float:
+  def _get_duration(self) -> float:
     return 4.0
 
   def _print(self, text: str):
