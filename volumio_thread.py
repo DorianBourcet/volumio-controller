@@ -29,6 +29,7 @@ class VolumioThread(Thread):
     self._status_since = time.time()
     self._state_updated_on = time.time()
     self._selected_index = 0
+    self._volumio_current_folder = None
   
   def _init_socketIO(self):
     self._socketIO = SocketIO('localhost', 3000)
@@ -39,6 +40,8 @@ class VolumioThread(Thread):
     self._socketIO.on('getState_response', self._on_state_response)
     self._socketIO.on('pushQueue', self._on_queue_response)
     self._socketIO.on('getQueue_response', self._on_queue_response)
+    self._socketIO.on('browseLibrary', self._on_browse_library_response)
+    self._socketIO.on('pushBrowseLibrary', self._on_browse_library_response)
 
   def _on_connect(self):
     self._connected = True
@@ -95,6 +98,9 @@ class VolumioThread(Thread):
 
   def _on_queue_response(self, *args):
     self._volumio_queue = args[0]
+  
+  def _on_browse_library_response(self, *args):
+    self._volumio_current_folder = args[0]
 
   def is_connected(self):
     return self._connected
@@ -244,6 +250,9 @@ class VolumioThread(Thread):
 
   def get_current_service(self):
     return self._volumio_service
+
+  def browse_library(self, uri: str):
+    self._socketIO.emit('browseLibrary',{'uri': uri})
 
   def run(self):
     self._init_socketIO()
