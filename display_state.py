@@ -16,7 +16,7 @@ class DisplayState:
     self.displaying_persistent = False
     self._persistent_texts = ['...']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
-    self.temporary_text_duration = None
+    self.temporary_text_duration = 2.0
     self.temporary_text = None
     self._overlay = None
     self.set_quiet_mode()
@@ -49,13 +49,10 @@ class DisplayState:
         self._issue_new_stop_event()
         self.display_persistent_texts()
 
-  def display_temporary_text(self, text: str, duration: float = None, marquee_trim_start: bool = False, wave: bool = False):
+  def display_temporary_text(self, text: str, duration: float = 2.0, marquee_trim_start: bool = False, wave: bool = False):
     self.displaying_persistent = False
     self.temporary_text = text
-    if duration:
-      self.temporary_text_duration = duration
-    else:
-      self.temporary_text_duration = None
+    self.temporary_text_duration = duration
     self._issue_new_stop_event()
     self._print(TemporaryDisplayThread(self,self.temporary_text,self._latest_stop_event, marquee_trim_start, wave))
 

@@ -9,9 +9,7 @@ class TemporaryDisplayThread(DisplayThread):
     self._marquee_trim_start = marquee_trim_start
 
   def _get_duration(self, length: int) -> float:
-    if self._duration:
-      return self._duration
-    return super()._get_duration(length)
+    return self._duration
 
   def _after_run(self):
     if not self._stop_event.is_set():
