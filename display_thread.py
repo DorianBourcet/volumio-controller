@@ -14,8 +14,8 @@ class DisplayThread(Thread):
     self._wave = wave
     self._waved = False
 
-  def _get_duration(self, length: int) -> float:
-    return 2.0+(length/12)
+  def _get_duration(self) -> float:
+    return 4.0
 
   def _print(self, text: str):
     upper = text.upper().replace('N°','No')
@@ -38,7 +38,7 @@ class DisplayThread(Thread):
     return False
 
   def _pretty_print(self, text: str, length: int, animate: bool):
-    duration = 4.0
+    duration = self._get_duration()
     total_spaces = 12-length
     after_spaces = total_spaces//2
     before_spaces = total_spaces-after_spaces
