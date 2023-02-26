@@ -33,7 +33,8 @@ class RadioStateMachine(object):
     { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
     { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
     { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_holding', 'conditions': 'can_pause' },
-    { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping'},
+    { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping' },
+    { 'trigger': 'turn_volume_up', 'source': 'home', 'dest': None, 'before': 'volume_up' },
   ]
 
   def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
@@ -130,15 +131,18 @@ class RadioStateMachine(object):
 
   def can_pause(self, event=None):
     return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
+  
+  def volume_up(self, event=None):
+    self._issue_new_temporary_display_stop_event()
+    self._volumio.volume_up()
+    self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
 
   def user_input_1_right(self):
     if self._is_quiet():
       self._wake_up()
       return
     self._wake_up()
-    self._issue_new_temporary_display_stop_event()
-    self._volumio.volume_up()
-    self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
+    self.turn_volume_up(silent=False)
   
   def user_input_1_left(self):
     if self._is_quiet():
