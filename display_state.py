@@ -50,6 +50,8 @@ class DisplayState:
         self.display_persistent_texts()
 
   def display_temporary_text(self, text: str, duration: float = 2.0, marquee_trim_start: bool = False, wave: bool = False):
+    if duration is None:
+      duration = 2.0
     self.displaying_persistent = False
     self.temporary_text = text
     self.temporary_text_duration = duration
