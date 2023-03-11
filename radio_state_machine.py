@@ -1,5 +1,6 @@
 from transitions.extensions import HierarchicalMachine
 from volumio_thread import VolumioThread
+from volumio_browser import VolumioBrowser
 from display_state import DisplayState
 from playing_track_display_thread import PlayingTrackDisplayThread
 from datetime_display_thread import DatetimeDisplayThread
@@ -38,8 +39,9 @@ class RadioStateMachine(object):
     { 'trigger': 'turn_volume_down', 'source': 'home', 'dest': None, 'before': 'volume_down' },
   ]
 
-  def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
+  def __init__(self, volumio: VolumioThread, browser: VolumioBrowser, display: DisplayState) -> None:
     self._volumio = volumio
+    self._browser = browser
     self._display = display
     self._latest_persistent_display_stop_event = Event()
     self._latest_temporary_display_stop_event = Event()

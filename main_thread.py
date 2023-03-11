@@ -1,6 +1,7 @@
 from threading import Thread, Event
 from display_state import DisplayState
 from volumio_thread import VolumioThread
+from volumio_browser import VolumioBrowser
 from user_input import UserInput
 from utils import format_min_sec
 import time
@@ -19,7 +20,8 @@ class MainThread(Thread):
     self._volumio = VolumioThread()
     self._volumio.daemon = True
     self._volumio.start()
-    self._radio = RadioStateMachine(self._volumio,display)
+    self._volumio_browser = VolumioBrowser()
+    self._radio = RadioStateMachine(self._volumio,self._volumio_browser,display)
     vigie = VigieThread(self._volumio,self._radio)
     vigie.daemon = True
     vigie.start()
@@ -45,6 +47,16 @@ class MainThread(Thread):
           print("Button 2 pressed")
         if self._user_input2.released():
           self._radio.user_input_2_released()
+
+        if self._user_input3.turned_right():
+          self._radio.user_input_3_right()
+        if self._user_input3.turned_left():
+          self._radio.user_input_3_left()
+        if self._user_input3.pressed():
+          self._radio.user_input_3_pressed()
+        if self._user_input3.released():
+          self._radio.user_input_3_released()
+
         if self._user_input4.turned_right():
           self._radio.user_input_4_right()
         if self._user_input4.turned_left():
