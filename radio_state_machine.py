@@ -204,7 +204,7 @@ class RadioStateMachine(object):
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text(text='  SUIV >',wave=True)
+      self._display.display_temporary_text(text='  SUIV >',wave=True, duration=3.5)
       self._volumio.next_track()
   
   def user_input_4_left(self):
@@ -217,7 +217,7 @@ class RadioStateMachine(object):
       track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text(text='< PREC  ',wave=True)
+      self._display.display_temporary_text(text='< PREC  ',wave=True,duration=3.5)
       self._volumio.previous_track()
 
   def user_input_4_pressed(self):
@@ -234,7 +234,6 @@ class RadioStateMachine(object):
     state = self.state
     if state == 'home_playing':
       self.stop_track(silent=False)
-    elif state == 'home_holding':
-      self.play_track(silent=False)
+    elif state == 'home_holding':      self.play_track(silent=False)
     elif state == 'home_sleeping':
       self.play_track(silent=False)
