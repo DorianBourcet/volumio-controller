@@ -37,9 +37,12 @@ class DisplayState:
     self.display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
 
-  def display_persistent_texts(self):
+  def display_persistent_texts(self, texts: list=None):
     self.displaying_persistent = True
-    self._print(PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._latest_stop_event))
+    if texts is not None:
+      self.set_persistent_texts(texts)
+    else:
+      self._print(PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._latest_stop_event))
 
   def set_persistent_texts(self, texts: list):
     if texts != self._persistent_texts:

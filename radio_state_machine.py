@@ -22,8 +22,8 @@ class RadioStateMachine(object):
         'holding',
         'sleeping',
       ]
-    }
-    #'menu',
+    },
+    'in_menu',
   ]
 
   transitions = [
@@ -35,8 +35,43 @@ class RadioStateMachine(object):
     { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
     { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_holding', 'conditions': 'can_pause' },
     { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping' },
-    { 'trigger': 'turn_volume_up', 'source': 'home', 'dest': None, 'before': 'volume_up' },
-    { 'trigger': 'turn_volume_down', 'source': 'home', 'dest': None, 'before': 'volume_down' },
+    { 'trigger': 'turn_volume_up', 'source': ['home', 'in_menu'], 'dest': None, 'before': 'volume_up' },
+    { 'trigger': 'turn_volume_down', 'source': ['home', 'in_menu'], 'dest': None, 'before': 'volume_down' },
+    { 'trigger': 'open_menu', 'source': 'home', 'dest': 'in_menu' },
+    { 'trigger': 'enter_menu', 'source': 'in_menu', 'dest': None, 'before': 'select_menu' },
+    { 'trigger': 'exit_menu', 'source': 'in_menu', 'dest': None, 'before': 'cancel_menu', 'conditions': 'is_in_sub_menu' },
+    { 'trigger': 'close_menu', 'source': 'in_menu', 'dest': 'home' },
+  ]
+
+  fake_menu = [
+    {
+      'name': 'Menu 1',
+      'items': [
+        {
+          'name': 'Menu 1-1',
+        },
+        {
+          'name': 'Menu 1-2',
+        },
+        {
+          'name': 'Menu 1-3',
+        },
+      ]
+    },
+    {
+      'name': 'Menu 2',
+      'items': [
+        {
+          'name': 'Menu 2-1',
+        },
+        {
+          'name': 'Menu 2-2',
+        },
+        {
+          'name': 'Menu 2-3',
+        },
+      ]
+    },
   ]
 
   def __init__(self, volumio: VolumioThread, browser: VolumioBrowser, display: DisplayState) -> None:
@@ -128,6 +163,10 @@ class RadioStateMachine(object):
     datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
     datetime_thread.daemon = True
     datetime_thread.start()
+
+  def on_enter_in_menu(self, event):
+    self._issue_new_persistent_display_stop_event()
+    self._display.display_persistent_texts(['the menu'])
   
   def can_play(self, event=None):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
@@ -145,25 +184,81 @@ class RadioStateMachine(object):
     self._volumio.volume_down()
     self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
 
-  def user_input_1_right(self):
+  def user_input_right(self, input_number: int):
     if self._is_quiet():
       self._wake_up()
       return
     self._wake_up()
+    state = self.state
+    if state == 'connecting':
+      return
+    if input_number == 1:
+        self.user_input_1_right()
+    elif input_number == 2:
+        self.user_input_2_right()
+    elif input_number == 3:
+        print('Button 3 right')
+    elif input_number == 4:
+        self.user_input_4_right()
+  
+  def user_input_left(self, input_number: int):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    state = self.state
+    if state == 'connecting':
+      return
+    if input_number == 1:
+        self.user_input_1_left()
+    elif input_number == 2:
+        self.user_input_2_left()
+    elif input_number == 3:
+        print('Button 3 left')
+    elif input_number == 4:
+        self.user_input_4_left()
+  
+  def user_input_pressed(self, input_number: int):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    state = self.state
+    if state == 'connecting':
+      return
+    if input_number == 1:
+        print('Button 1 pressed')
+    elif input_number == 2:
+        print('Button 2 pressed')
+    elif input_number == 3:
+        print('Button 3 pressed')
+    elif input_number == 4:
+        print('Button 4 pressed')
+  
+  def user_input_released(self, input_number: int):
+    if self._is_quiet():
+      self._wake_up()
+      return
+    self._wake_up()
+    state = self.state
+    if state == 'connecting':
+      return
+    if input_number == 1:
+        print('Button 1 released')
+    elif input_number == 2:
+        self.user_input_2_released()
+    elif input_number == 3:
+        self.user_input_3_released()
+    elif input_number == 4:
+        self.user_input_4_released()
+
+  def user_input_1_right(self):
     self.turn_volume_up(silent=False)
   
   def user_input_1_left(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     self.turn_volume_down(silent=False)
 
   def user_input_2_right(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     self._volumio.seek_up()
     self._issue_new_temporary_display_stop_event()
     track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
@@ -171,10 +266,6 @@ class RadioStateMachine(object):
     track_elapsed.start()
 
   def user_input_2_left(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     self._volumio.seek_down()
     self._issue_new_temporary_display_stop_event()
     track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
@@ -182,21 +273,18 @@ class RadioStateMachine(object):
     track_elapsed.start()
 
   def user_input_2_released(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     state = self.state
     if state == 'home_playing' and self.can_pause():
       self.pause_track(silent=False)
     elif state == 'home_holding':
       self.play_track(silent=False)
+    elif state == 'in_menu':
+      self.close_menu()
+  
+  def user_input_3_released(self):
+    self.open_menu()
 
   def user_input_4_right(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     if self._volumio.can_browse_queue():
       idx = self._volumio.selected_index_next()
       name = utils.shorten_text(self._volumio.get_track(idx))
@@ -222,20 +310,11 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text='< PREC  ',wave=True,duration=3.5)
       self._volumio.previous_track()
 
-  def user_input_4_pressed(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
-
   def user_input_4_released(self):
-    if self._is_quiet():
-      self._wake_up()
-      return
-    self._wake_up()
     state = self.state
     if state == 'home_playing':
       self.stop_track(silent=False)
-    elif state == 'home_holding':      self.play_track(silent=False)
+    elif state == 'home_holding':
+      self.play_track(silent=False)
     elif state == 'home_sleeping':
       self.play_track(silent=False)
