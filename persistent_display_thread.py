@@ -8,4 +8,4 @@ class PersistentDisplayThread(DisplayThread):
 
   def _after_run(self):
     if not self._stop_event.is_set():
-      self._display_state.display_persistent_texts()
+      self._display_state.display_persistent_texts(stop_daemons=False)

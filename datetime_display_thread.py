@@ -8,12 +8,12 @@ import math
 
 class DatetimeDisplayThread(Thread):
 
-  def __init__(self, display:DisplayState, stop_event:Event):
+  def __init__(self, display:DisplayState):
     super().__init__()
     self._display = display
     self._clock_tick = True
     self._latest_timestamp = None
-    self._stop_event = stop_event
+    self.daemon = True
   
   def _display_datetime(self):
     now = math.ceil(time.time())
@@ -29,6 +29,7 @@ class DatetimeDisplayThread(Thread):
     self._display.set_persistent_texts([' '+day+'.'+month+'  '+hours+separator+minutes+' '])
 
   def run(self):
-    while not self._stop_event.is_set():
+    stop_event = self._display.issue_persistent_display_daemon_stop_event()
+    while not stop_event.is_set():
       self._display_datetime()
       time.sleep(0.25)

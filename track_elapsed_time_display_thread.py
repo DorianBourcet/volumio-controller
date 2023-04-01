@@ -6,11 +6,10 @@ from utils import format_min_sec
 
 class TrackElapsedTimeDisplayThread(Thread):
 
-  def __init__(self, volumio:VolumioThread, display:DisplayState, stop_event:Event):
+  def __init__(self, volumio:VolumioThread, display:DisplayState):
     super().__init__()
     self._volumio = volumio
     self._display = display
-    self._stop_event = stop_event
 
   def _produce_elapsed_time_text(self) -> str:
     elapsed = self._volumio.get_seek()

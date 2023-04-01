@@ -5,14 +5,15 @@ import time
 
 class PlayingTrackDisplayThread(Thread):
 
-  def __init__(self, volumio:VolumioThread, display:DisplayState, stop_event:Event):
+  def __init__(self, volumio:VolumioThread, display:DisplayState):
     super().__init__()
     self._volumio = volumio
     self._display = display
-    self._stop_event = stop_event
+    self.daemon = True
 
   def run(self):
-    while not self._stop_event.is_set():
+    stop_event = self._display.issue_persistent_display_daemon_stop_event()
+    while not stop_event.is_set():
       if self._volumio.is_playing():
         self._display.set_persistent_texts(self._volumio.get_playing_track())
       else:

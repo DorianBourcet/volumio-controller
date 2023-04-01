@@ -13,6 +13,7 @@ class DisplayThread(Thread):
     self._stop_event = stop_event
     self._wave = wave
     self._waved = False
+    self.daemon = True
 
   def _get_duration(self) -> float:
     return 4.0

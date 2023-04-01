@@ -7,6 +7,7 @@ from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from track_selector_thread import TrackSelectorThread
+from menu_thread import MenuThread
 from threading import Event
 import time
 import utils
@@ -23,24 +24,24 @@ class RadioStateMachine(object):
         'sleeping',
       ]
     },
-    'in_menu',
+    'menu',
   ]
 
   transitions = [
     #{ 'trigger': 'show_menu', 'source': 'standing', 'dest': 'menu' },
-    #{ 'trigger': 'exit_menu', 'source': 'menu', 'dest': 'standing' },
+    #{ 'trigger'back', 'source': 'menu', 'dest': 'standing' },
     { 'trigger': 'wait_for_connection', 'source': '*', 'dest': 'connecting' },
     { 'trigger': 'back_home', 'source': '*', 'dest': 'home' },
     { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
     { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
     { 'trigger': 'pause_track', 'source': ['home', 'home_playing'], 'dest': 'home_holding', 'conditions': 'can_pause' },
     { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping' },
-    { 'trigger': 'turn_volume_up', 'source': ['home', 'in_menu'], 'dest': None, 'before': 'volume_up' },
-    { 'trigger': 'turn_volume_down', 'source': ['home', 'in_menu'], 'dest': None, 'before': 'volume_down' },
-    { 'trigger': 'open_menu', 'source': 'home', 'dest': 'in_menu' },
-    { 'trigger': 'enter_menu', 'source': 'in_menu', 'dest': None, 'before': 'select_menu' },
-    { 'trigger': 'exit_menu', 'source': 'in_menu', 'dest': None, 'before': 'cancel_menu', 'conditions': 'is_in_sub_menu' },
-    { 'trigger': 'close_menu', 'source': 'in_menu', 'dest': 'home' },
+    { 'trigger': 'turn_volume_up', 'source': ['home', 'menu'], 'dest': None, 'before': 'volume_up' },
+    { 'trigger': 'turn_volume_down', 'source': ['home', 'menu'], 'dest': None, 'before': 'volume_down' },
+    { 'trigger': 'open_menu', 'source': 'home', 'dest': 'menu' },
+    { 'trigger': 'enter_menu', 'source': 'menu', 'dest': None, 'before': 'select_menu' },
+    { 'trigger': 'back_menu', 'source': 'menu', 'dest': None, 'before': 'cancel_menu', 'conditions': 'is_in_sub_menu' },
+    { 'trigger': 'close_menu', 'source': 'menu', 'dest': 'home' },
   ]
 
   fake_menu = [
@@ -78,8 +79,6 @@ class RadioStateMachine(object):
     self._volumio = volumio
     self._browser = browser
     self._display = display
-    self._latest_persistent_display_stop_event = Event()
-    self._latest_temporary_display_stop_event = Event()
     self._latest_active_to_quiet_stop_event = Event()
     self._latest_track_selector_stop_event = Event()
     self._quiet_event = Event()
@@ -92,14 +91,6 @@ class RadioStateMachine(object):
       transitions=RadioStateMachine.transitions
     )
     self._wake_up()
-  
-  def _issue_new_persistent_display_stop_event(self):
-    self._latest_persistent_display_stop_event.set()
-    self._latest_persistent_display_stop_event = Event()
-  
-  def _issue_new_temporary_display_stop_event(self):
-    self._latest_temporary_display_stop_event.set()
-    self._latest_temporary_display_stop_event = Event()
 
   def _issue_new_active_to_quiet_stop_event(self):
     self._latest_active_to_quiet_stop_event.set()
@@ -115,12 +106,10 @@ class RadioStateMachine(object):
   def _wake_up(self):
     self._issue_new_active_to_quiet_stop_event()
     active_to_quiet_thread = ActiveToQuietDisplayThread(self._display,self._latest_active_to_quiet_stop_event,self._quiet_event)
-    active_to_quiet_thread.daemon = True
     active_to_quiet_thread.start()
   
   def on_enter_connecting(self, event):
-    self._issue_new_persistent_display_stop_event()
-    self._display.set_persistent_texts(['En attente de Volumio...'])
+    self._display.display_persistent_texts(['En attente de Volumio...'])
 
   def _event_to_context(self, event) -> dict:
     return {
@@ -141,9 +130,7 @@ class RadioStateMachine(object):
     if not context['silent']:
       self._display.display_temporary_text(text='LECTURE',wave=True)
     self._volumio.resume()
-    self._issue_new_persistent_display_stop_event()
-    playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display,self._latest_persistent_display_stop_event)
-    playing_track_thread.daemon = True
+    playing_track_thread = PlayingTrackDisplayThread(self._volumio,self._display)
     playing_track_thread.start()
 
   def on_enter_home_holding(self, event):
@@ -151,7 +138,7 @@ class RadioStateMachine(object):
     if not context['silent']:
       self._display.display_temporary_text(text='PAUSE',wave=True)
     self._volumio.pause()
-    self._issue_new_persistent_display_stop_event()
+    self._display.issue_persistent_display_daemon_stop_event()
     self._display.set_persistent_texts(['En pause...'])
 
   def on_enter_home_sleeping(self, event):
@@ -159,14 +146,18 @@ class RadioStateMachine(object):
     if not context['silent']:
       self._display.display_temporary_text(text='STOP',wave=True)
     self._volumio.stop()
-    self._issue_new_persistent_display_stop_event()
-    datetime_thread = DatetimeDisplayThread(self._display,self._latest_persistent_display_stop_event)
-    datetime_thread.daemon = True
+    datetime_thread = DatetimeDisplayThread(self._display)
     datetime_thread.start()
 
-  def on_enter_in_menu(self, event):
-    self._issue_new_persistent_display_stop_event()
-    self._display.display_persistent_texts(['the menu'])
+  def on_enter_menu(self, event):
+    self._display.issue_persistent_display_daemon_stop_event()
+    self._display.display_temporary_text(text='MENU',wave=True,duration=0.5)
+    self._menu = MenuThread(self._display)
+    self._menu.start()
+  
+  def on_exit_menu(self, event):
+    self._menu.close()
+    self._menu = None
   
   def can_play(self, event=None):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
@@ -175,12 +166,10 @@ class RadioStateMachine(object):
     return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
   
   def volume_up(self, event=None):
-    self._issue_new_temporary_display_stop_event()
     self._volumio.volume_up()
     self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
 
   def volume_down(self, event=None):
-    self._issue_new_temporary_display_stop_event()
     self._volumio.volume_down()
     self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
 
@@ -260,16 +249,12 @@ class RadioStateMachine(object):
 
   def user_input_2_right(self):
     self._volumio.seek_up()
-    self._issue_new_temporary_display_stop_event()
-    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
-    track_elapsed.daemon = True
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
     track_elapsed.start()
 
   def user_input_2_left(self):
     self._volumio.seek_down()
-    self._issue_new_temporary_display_stop_event()
-    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display,self._latest_temporary_display_stop_event)
-    track_elapsed.daemon = True
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
     track_elapsed.start()
 
   def user_input_2_released(self):
@@ -278,7 +263,7 @@ class RadioStateMachine(object):
       self.pause_track(silent=False)
     elif state == 'home_holding':
       self.play_track(silent=False)
-    elif state == 'in_menu':
+    elif state == 'menu':
       self.close_menu()
   
   def user_input_3_released(self):
@@ -291,10 +276,9 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text=name,marquee_trim_start=True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
-      track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text(text='  SUIV >',wave=True, duration=3.5)
+      self._display.display_temporary_text(text='  SUIV. >',wave=True, duration=3.5)
       self._volumio.next_track()
   
   def user_input_4_left(self):
@@ -304,10 +288,9 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text=name,marquee_trim_start=True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
-      track_selector.daemon = True
       track_selector.start()
     else:
-      self._display.display_temporary_text(text='< PREC  ',wave=True,duration=3.5)
+      self._display.display_temporary_text(text='< PREC.  ',wave=True,duration=3.5)
       self._volumio.previous_track()
 
   def user_input_4_released(self):

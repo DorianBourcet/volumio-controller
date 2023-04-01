@@ -14,11 +14,14 @@ class TrackSelectorThread(Thread):
     self._index = index
     self._name = name
     self._stop_event = stop_event
+    self.daemon = True
   
   def should_select(self):
     return time.time() - self._start >= self._select_after_sec
 
   def run(self):
+    if self._volumio.get_current_queue_position() == self._index:
+      return
     self._start = time.time()
     while not self._stop_event.is_set() and not self.should_select():
       time.sleep(0.25)

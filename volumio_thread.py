@@ -147,6 +147,9 @@ class VolumioThread(Thread):
       self._volumio_volume = volume
       self._socketIO.emit('volume', volume)
 
+  def get_current_queue_position(self) -> int:
+    return self._volumio_queue_position
+
   def get_next_track(self) -> str:
     current_position = self._volumio_queue_position
     next_position = current_position + 1

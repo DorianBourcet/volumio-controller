@@ -11,6 +11,7 @@ class ActiveToQuietDisplayThread(Thread):
     self._quiet_after_sec = quiet_after_sec
     self._stop_event = stop_event
     self._quiet_event = quiet_event
+    self.daemon = True
   
   def should_go_quiet(self):
     return time.time() - self._start >= self._quiet_after_sec
