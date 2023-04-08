@@ -1,13 +1,11 @@
 from transitions.extensions import HierarchicalMachine
 from volumio_thread import VolumioThread
-from volumio_browser import VolumioBrowser
 from display_state import DisplayState
 from playing_track_display_thread import PlayingTrackDisplayThread
 from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from track_selector_thread import TrackSelectorThread
-from menu_thread import MenuThread
 from threading import Event
 import time
 import utils
@@ -75,9 +73,8 @@ class RadioStateMachine(object):
     },
   ]
 
-  def __init__(self, volumio: VolumioThread, browser: VolumioBrowser, display: DisplayState) -> None:
+  def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
     self._volumio = volumio
-    self._browser = browser
     self._display = display
     self._latest_active_to_quiet_stop_event = Event()
     self._latest_track_selector_stop_event = Event()
@@ -150,14 +147,17 @@ class RadioStateMachine(object):
     datetime_thread.start()
 
   def on_enter_menu(self, event):
+    from menu_thread import MenuThread
     self._display.issue_persistent_display_daemon_stop_event()
     self._display.display_temporary_text(text='MENU',wave=True,duration=0.5)
-    self._menu = MenuThread(self._display)
+    self._menu = MenuThread(self._display,self)
     self._menu.start()
   
   def on_exit_menu(self, event):
-    self._menu.close()
-    self._menu = None
+    context = self._event_to_context(event)
+    if not context['silent']:
+      self._menu.close()
+      self._menu = None
   
   def can_play(self, event=None):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
@@ -186,7 +186,7 @@ class RadioStateMachine(object):
     elif input_number == 2:
         self.user_input_2_right()
     elif input_number == 3:
-        print('Button 3 right')
+        self.user_input_3_right()
     elif input_number == 4:
         self.user_input_4_right()
   
@@ -203,7 +203,7 @@ class RadioStateMachine(object):
     elif input_number == 2:
         self.user_input_2_left()
     elif input_number == 3:
-        print('Button 3 left')
+        self.user_input_3_left()
     elif input_number == 4:
         self.user_input_4_left()
   
@@ -251,11 +251,21 @@ class RadioStateMachine(object):
     self._volumio.seek_up()
     track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
     track_elapsed.start()
+  
+  def user_input_3_right(self):
+    state = self.state
+    if state == 'menu':
+      self._menu.display_next()
 
   def user_input_2_left(self):
     self._volumio.seek_down()
     track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
     track_elapsed.start()
+
+  def user_input_3_left(self):
+    state = self.state
+    if state == 'menu':
+      self._menu.display_previous()
 
   def user_input_2_released(self):
     state = self.state
@@ -264,10 +274,14 @@ class RadioStateMachine(object):
     elif state == 'home_holding':
       self.play_track(silent=False)
     elif state == 'menu':
-      self.close_menu()
+      self.close_menu(silent=False)
   
   def user_input_3_released(self):
-    self.open_menu()
+    state = self.state
+    if state != 'menu':
+      self.open_menu()
+    else:
+      self._menu.select_current()
 
   def user_input_4_right(self):
     if self._volumio.can_browse_queue():

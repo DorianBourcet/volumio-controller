@@ -1,7 +1,6 @@
 from threading import Thread, Event
 from display_state import DisplayState
 from volumio_thread import VolumioThread
-from volumio_browser import VolumioBrowser
 from user_input import UserInput
 from utils import format_min_sec
 import time
