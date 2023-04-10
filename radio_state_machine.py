@@ -106,7 +106,7 @@ class RadioStateMachine(object):
     active_to_quiet_thread.start()
   
   def on_enter_connecting(self, event):
-    self._display.display_persistent_texts(['En attente de Volumio...'])
+    self._display.display_persistent_texts(texts=['En attente de Volumio...'],continuous_marquee=True)
 
   def _event_to_context(self, event) -> dict:
     return {
@@ -136,7 +136,7 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text='PAUSE',wave=True)
     self._volumio.pause()
     self._display.issue_persistent_display_daemon_stop_event()
-    self._display.set_persistent_texts(['En pause...'])
+    self._display.set_persistent_texts(texts=['En pause...'],continuous_marquee=False)
 
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
