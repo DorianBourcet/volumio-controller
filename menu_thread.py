@@ -67,21 +67,21 @@ class MenuThread(Thread):
   
   def display_first(self):
     self._selected_index = 0
-    self._display.set_persistent_texts([self._get_option_name(self._selected_index)])
+    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
   
   def display_next(self):
     next_selected_index = self._selected_index + 1
     if next_selected_index >= len(self._current_options):
       next_selected_index = 0
     self._selected_index = next_selected_index
-    self._display.set_persistent_texts([self._get_option_name(self._selected_index)])
+    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
   
   def display_previous(self):
     previous_selected_index = self._selected_index - 1
     if previous_selected_index < 0:
       previous_selected_index = len(self._current_options) - 1
     self._selected_index = previous_selected_index
-    self._display.set_persistent_texts([self._get_option_name(self._selected_index)])
+    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
   
   def select_current(self):
     print('select current')

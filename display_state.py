@@ -2,6 +2,7 @@ import board
 import busio as io
 import adafruit_ht16k33.segments
 from threading import Event
+from continuous_marquee_display_thread import ContinuousMarqueeDisplayThread
 from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
 from threading import Event
@@ -18,6 +19,7 @@ class DisplayState:
     self.displaying_persistent = False
     self._persistent_texts = ['...']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
+    self._persistent_texts_continuous_marquee = False
     self.temporary_text_duration = 2.0
     self.temporary_text = None
     self._overlay = None
@@ -46,18 +48,25 @@ class DisplayState:
     self.display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
 
-  def display_persistent_texts(self, texts: list=None, stop_daemons: bool = True):
+  def display_persistent_texts(self, texts: list=None, continuous_marquee:bool = None, stop_daemons: bool = True):
+    if continuous_marquee is not None:
+      self._persistent_texts_continuous_marquee = continuous_marquee
     if stop_daemons:
       self.issue_persistent_display_daemon_stop_event()
       self.issue_temporary_display_daemon_stop_event()
     self.displaying_persistent = True
     if texts is not None:
       self.set_persistent_texts(texts)
+    elif self._persistent_texts_continuous_marquee:
+      printer = ContinuousMarqueeDisplayThread(self,' '.join(self._persistent_texts),self._issue_stop_event())
+      printer.start()
     else:
       printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event())
       printer.start()
 
-  def set_persistent_texts(self, texts: list):
+  def set_persistent_texts(self, texts: list, continuous_marquee: bool = None):
+    if continuous_marquee is not None:
+      self._persistent_texts_continuous_marquee = continuous_marquee
     if texts != self._persistent_texts:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)

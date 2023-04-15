@@ -26,7 +26,7 @@ class DatetimeDisplayThread(Thread):
     month = now.strftime('%-m').ljust(2,' ')
     hours = now.strftime('%-H').rjust(2,' ')
     minutes = now.strftime('%M')
-    self._display.set_persistent_texts([' '+day+'.'+month+'  '+hours+separator+minutes+' '])
+    self._display.set_persistent_texts(texts=[' '+day+'.'+month+'  '+hours+separator+minutes+' '],continuous_marquee=False)
 
   def run(self):
     stop_event = self._display.issue_persistent_display_daemon_stop_event()
