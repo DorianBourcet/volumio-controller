@@ -236,6 +236,12 @@ class VolumioThread(Thread):
         self._socketIO.emit('volatilePlay')
       else:
         self._socketIO.emit('play')
+  
+  def hold_on(self):
+    if self.is_interactive_broadcast():
+      self.pause()
+    else:
+      self.stop()
 
   def stop(self):
     if self._volumio_status != 'stop':

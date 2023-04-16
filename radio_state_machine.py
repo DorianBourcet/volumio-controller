@@ -26,8 +26,6 @@ class RadioStateMachine(object):
   ]
 
   transitions = [
-    #{ 'trigger': 'show_menu', 'source': 'standing', 'dest': 'menu' },
-    #{ 'trigger'back', 'source': 'menu', 'dest': 'standing' },
     { 'trigger': 'wait_for_connection', 'source': '*', 'dest': 'connecting' },
     { 'trigger': 'back_home', 'source': '*', 'dest': 'home' },
     { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
@@ -38,39 +36,8 @@ class RadioStateMachine(object):
     { 'trigger': 'turn_volume_down', 'source': ['home', 'menu'], 'dest': None, 'before': 'volume_down' },
     { 'trigger': 'open_menu', 'source': 'home', 'dest': 'menu' },
     { 'trigger': 'enter_menu', 'source': 'menu', 'dest': None, 'before': 'select_menu' },
-    { 'trigger': 'back_menu', 'source': 'menu', 'dest': None, 'before': 'cancel_menu', 'conditions': 'is_in_sub_menu' },
+    { 'trigger': 'back_menu', 'source': 'menu', 'dest': None, 'before': 'cancel_menu' },
     { 'trigger': 'close_menu', 'source': 'menu', 'dest': 'home' },
-  ]
-
-  fake_menu = [
-    {
-      'name': 'Menu 1',
-      'items': [
-        {
-          'name': 'Menu 1-1',
-        },
-        {
-          'name': 'Menu 1-2',
-        },
-        {
-          'name': 'Menu 1-3',
-        },
-      ]
-    },
-    {
-      'name': 'Menu 2',
-      'items': [
-        {
-          'name': 'Menu 2-1',
-        },
-        {
-          'name': 'Menu 2-2',
-        },
-        {
-          'name': 'Menu 2-3',
-        },
-      ]
-    },
   ]
 
   def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
@@ -135,14 +102,14 @@ class RadioStateMachine(object):
     if not context['silent']:
       self._display.display_temporary_text(text='PAUSE',wave=True)
     self._volumio.pause()
-    self._display.issue_persistent_display_daemon_stop_event()
-    self._display.set_persistent_texts(texts=['En pause...'],continuous_marquee=False)
+    datetime_thread = DatetimeDisplayThread(self._display)
+    datetime_thread.start()
 
   def on_enter_home_sleeping(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
       self._display.display_temporary_text(text='STOP',wave=True)
-    self._volumio.stop()
+    self._volumio.hold_on()
     datetime_thread = DatetimeDisplayThread(self._display)
     datetime_thread.start()
 
@@ -172,6 +139,12 @@ class RadioStateMachine(object):
   def volume_down(self, event=None):
     self._volumio.volume_down()
     self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
+  
+  def select_menu(self, event=None):
+    self._menu.select_current()
+
+  def cancel_menu(self, event=None):
+    self._menu.back()
 
   def user_input_right(self, input_number: int):
     if self._is_quiet():
@@ -269,19 +242,19 @@ class RadioStateMachine(object):
 
   def user_input_2_released(self):
     state = self.state
-    if state == 'home_playing' and self.can_pause():
-      self.pause_track(silent=False)
-    elif state == 'home_holding':
-      self.play_track(silent=False)
-    elif state == 'menu':
-      self.close_menu(silent=False)
+    # if state == 'home_playing' and self.can_pause():
+    #   self.pause_track(silent=False)
+    # elif state == 'home_holding':
+    #   self.play_track(silent=False)
+    if state == 'menu':
+      self.back_menu(silent=False)
   
   def user_input_3_released(self):
     state = self.state
     if state != 'menu':
       self.open_menu()
     else:
-      self._menu.select_current()
+      self.enter_menu()
 
   def user_input_4_right(self):
     if self._volumio.can_browse_queue():
