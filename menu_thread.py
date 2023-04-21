@@ -8,6 +8,7 @@ import volumio_api
 import pytz
 import time
 import math
+import utils
 
 class MenuThread(Thread):
 
@@ -21,28 +22,30 @@ class MenuThread(Thread):
     self._history = []
     self._current_volumio_folder = ''
     self._volumio_menu = VolumioMenu('volumio')
+    self._last_input_time = None
+    self._close_after_sec = 15.0
     self.daemon = True
   
-  def home(self):
-    print('in home')
+  def _home(self):
+    # print('in home')
     options = self._volumio_menu.browse()
     self._render_options(options)
     self._history = []
   
-  def select(self, selected_option: dict):
-    print('select:')
-    print(selected_option)
+  def _select(self, selected_option: dict):
+    # print('select:')
+    # print(selected_option)
     provider = selected_option['provider']
     uri = selected_option['uri']
     result = self._browse_provider(provider,uri)
     result_type = type(result)
-    print(result)
+    # print(result)
     if result_type is list:
       # result is a list, then needs to render it
       self._render_options(result)
       self._history.append(selected_option)
     elif result_type is dict:
-      print('is dict')
+      # print('is dict')
       # result is a dict, then display a temporary message and exit menu if required
       message = result['message']
       must_close = result['terminated']
@@ -64,7 +67,7 @@ class MenuThread(Thread):
       'provider': 'internal'
     })
     self._current_options = options
-    print(self._current_options)
+    # print(self._current_options)
     self._display_first()
 
   def _get_option_name(self, index: int):
@@ -78,28 +81,35 @@ class MenuThread(Thread):
     self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
   
   def display_next(self):
+    self._last_input_time = time.time()
     next_selected_index = self._selected_index + 1
     if next_selected_index >= len(self._current_options):
       next_selected_index = 0
     self._selected_index = next_selected_index
-    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
+    option_name = self._get_option_name(self._selected_index)
+    self._display.display_temporary_text(text=utils.shorten_text(option_name),duration=1.0,align_left=True)
+    self._display.set_persistent_texts(texts=[option_name],continuous_marquee=True)
   
   def display_previous(self):
+    self._last_input_time = time.time()
     previous_selected_index = self._selected_index - 1
     if previous_selected_index < 0:
       previous_selected_index = len(self._current_options) - 1
     self._selected_index = previous_selected_index
-    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
+    option_name = self._get_option_name(self._selected_index)
+    self._display.display_temporary_text(text=utils.shorten_text(option_name),duration=1.0,align_left=True)
+    self._display.set_persistent_texts(texts=[option_name],continuous_marquee=True)
   
   def select_current(self):
+    self._last_input_time = time.time()
     self._display.set_persistent_texts(texts=['...'],continuous_marquee=False)
-    print('select current')
+    # print('select current')
     option = self._get_option(self._selected_index)
-    self.select(option)
+    self._select(option)
   
   def _select_internal(self, uri: str):
     if uri == 'back':
-      print('select back')
+      # print('select back')
       if not self._history:
         self.close()
       else:
@@ -109,7 +119,11 @@ class MenuThread(Thread):
           return self._browse_provider(option['provider'],option['uri'])
         return self._volumio_menu.browse()
   
+  def _should_close(self):
+    return time.time() - self._last_input_time >= self._close_after_sec
+  
   def back(self):
+    self._last_input_time = time.time()
     if not self._history:
       self.close()
     else:
@@ -117,7 +131,8 @@ class MenuThread(Thread):
       if self._history:
         option = self._history[len(self._history)-1]
         result = self._browse_provider(option['provider'],option['uri'])
-      result = self._volumio_menu.browse()
+      else:
+        result = self._volumio_menu.browse()
       self._render_options(result)
   
   def close(self):
@@ -128,9 +143,12 @@ class MenuThread(Thread):
     self._radio.close_menu()
 
   def run(self):
-    print('opened menu thread')
+    # print('opened menu thread')
+    self._last_input_time = time.time()
     self._stop_event = self._display.issue_persistent_display_daemon_stop_event()
-    self.home()
+    self._home()
     while not self._stop_event.is_set():
+      if self._should_close():
+        self.close()
       time.sleep(0.25)
-    print('closed menu thread')
+    # print('closed menu thread')

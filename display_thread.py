@@ -6,11 +6,12 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, wave:bool=False):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, align_left: bool = False, wave:bool=False):
     super().__init__()
     self._display_state = display_state
     self._text_to_display = text_to_display
     self._stop_event = stop_event
+    self._align_left = align_left
     self._wave = wave
     self._waved = False
     self.daemon = True
@@ -38,12 +39,15 @@ class DisplayThread(Thread):
   def _on_marquee_must_trim_start(self):
     return False
 
-  def _pretty_print(self, text: str, length: int, animate: bool):
+  def _pretty_print(self, text: str, align_left: bool, length: int, animate: bool):
     duration = self._get_duration()
     total_spaces = 12-length
-    after_spaces = total_spaces//2
-    before_spaces = total_spaces-after_spaces
-    full_text = ' '*before_spaces+text+' '*after_spaces
+    if align_left:
+      full_text = text+' '*total_spaces
+    else:
+      after_spaces = total_spaces//2
+      before_spaces = total_spaces-after_spaces
+      full_text = ' '*before_spaces+text+' '*after_spaces
     start = time.time()
     if self._stop_event.is_set():
       return
@@ -84,7 +88,7 @@ class DisplayThread(Thread):
         animate = True
       else:
         animate = False
-      self._pretty_print(self._text_to_display,length,animate)
+      self._pretty_print(self._text_to_display,self._align_left,length,animate)
       self._waved = True
     else:
       self._pretty_marquee(self._text_to_display, self._on_marquee_must_trim_start())

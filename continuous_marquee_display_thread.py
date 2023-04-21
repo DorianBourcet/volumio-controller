@@ -9,7 +9,7 @@ class ContinuousMarqueeDisplayThread(DisplayThread):
     super().__init__(display_state,text_to_display,stop_event)
 
   def _continuous_marquee(self, text: str):
-    text = ' '+text
+    text = text+' '
     start = 0
     parts = re.findall('([^\.]\.|[^\.]|\.)', text)
     length = len(parts)

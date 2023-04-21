@@ -80,6 +80,7 @@ class DisplayState:
     duration: float = 2.0,
     marquee_trim_start: bool = False,
     wave: bool = False,
+    align_left: bool = False,
     stop_daemons: bool = True
   ):
     if stop_daemons:
@@ -87,6 +88,6 @@ class DisplayState:
     self.displaying_persistent = False
     self.temporary_text = text
     self.temporary_text_duration = duration
-    printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, wave)
+    printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave)
     printer.start()
 
