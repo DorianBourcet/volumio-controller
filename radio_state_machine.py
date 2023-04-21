@@ -189,13 +189,13 @@ class RadioStateMachine(object):
     if state == 'connecting':
       return
     if input_number == 1:
-        print('Button 1 pressed')
+      print('Button 1 pressed')
     elif input_number == 2:
-        print('Button 2 pressed')
+      self.user_input_2_pressed()
     elif input_number == 3:
-        print('Button 3 pressed')
+      self.user_input_3_pressed()
     elif input_number == 4:
-        print('Button 4 pressed')
+      self.user_input_4_pressed()
   
   def user_input_released(self, input_number: int):
     if self._is_quiet():
@@ -206,13 +206,13 @@ class RadioStateMachine(object):
     if state == 'connecting':
       return
     if input_number == 1:
-        print('Button 1 released')
+      print('Button 1 released')
     elif input_number == 2:
-        self.user_input_2_released()
+      print('Button 2 released')
     elif input_number == 3:
-        self.user_input_3_released()
+      print('Button 3 released')
     elif input_number == 4:
-        self.user_input_4_released()
+      print('Button 4 released')
 
   def user_input_1_right(self):
     self.turn_volume_up(silent=False)
@@ -240,7 +240,7 @@ class RadioStateMachine(object):
     if state == 'menu':
       self._menu.display_previous()
 
-  def user_input_2_released(self):
+  def user_input_2_pressed(self):
     state = self.state
     # if state == 'home_playing' and self.can_pause():
     #   self.pause_track(silent=False)
@@ -249,7 +249,7 @@ class RadioStateMachine(object):
     if state == 'menu':
       self.back_menu(silent=False)
   
-  def user_input_3_released(self):
+  def user_input_3_pressed(self):
     state = self.state
     if state != 'menu':
       self.open_menu()
@@ -280,7 +280,7 @@ class RadioStateMachine(object):
       self._display.display_temporary_text(text='< PREC.  ',wave=True,duration=3.5)
       self._volumio.previous_track()
 
-  def user_input_4_released(self):
+  def user_input_4_pressed(self):
     state = self.state
     if state == 'home_playing':
       self.stop_track(silent=False)
