@@ -6,18 +6,19 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, align_left: bool = False, wave:bool=False):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 4.0, align_left: bool = False, wave:bool=False):
     super().__init__()
     self._display_state = display_state
     self._text_to_display = text_to_display
     self._stop_event = stop_event
+    self._duration = duration
     self._align_left = align_left
     self._wave = wave
     self._waved = False
     self.daemon = True
 
   def _get_duration(self) -> float:
-    return 4.0
+    return self._duration
 
   def _print(self, text: str):
     upper = text.upper().replace('N°','No')

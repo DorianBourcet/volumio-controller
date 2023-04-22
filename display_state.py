@@ -17,9 +17,10 @@ class DisplayState:
     self._persistent_display_daemon_stop_event = Event()
     self._temporary_display_daemon_stop_event = Event()
     self.displaying_persistent = False
-    self._persistent_texts = ['...']
+    self._persistent_texts = ['.  ','.. ','...',' ..','  .','']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
     self._persistent_texts_continuous_marquee = False
+    self._persistent_text_duration = 4.0
     self.temporary_text_duration = 2.0
     self.temporary_text = None
     self._overlay = None
@@ -48,9 +49,11 @@ class DisplayState:
     self.display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
 
-  def display_persistent_texts(self, texts: list=None, continuous_marquee:bool = None, stop_daemons: bool = True):
+  def display_persistent_texts(self, texts: list=None, duration: float = None, continuous_marquee:bool = None, stop_daemons: bool = True):
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee
+    if duration is not None:
+      self._persistent_text_duration = duration
     if stop_daemons:
       self.issue_persistent_display_daemon_stop_event()
       self.issue_temporary_display_daemon_stop_event()
@@ -61,12 +64,14 @@ class DisplayState:
       printer = ContinuousMarqueeDisplayThread(self,' '.join(self._persistent_texts),self._issue_stop_event())
       printer.start()
     else:
-      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event())
+      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event(),self._persistent_text_duration)
       printer.start()
 
-  def set_persistent_texts(self, texts: list, continuous_marquee: bool = None):
+  def set_persistent_texts(self, texts: list, duration: float = None, continuous_marquee: bool = None):
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee
+    if duration is not None:
+      self._persistent_text_duration = duration
     if texts != self._persistent_texts:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)
@@ -90,4 +95,8 @@ class DisplayState:
     self.temporary_text_duration = duration
     printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave)
     printer.start()
+  
+  def clear_persistent_display(self):
+    self.issue_persistent_display_daemon_stop_event()
+    self.set_persistent_texts(texts=[''])
 

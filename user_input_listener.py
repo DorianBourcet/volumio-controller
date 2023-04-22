@@ -5,7 +5,6 @@ from user_input import UserInput
 from utils import format_min_sec
 import time
 from radio_state_machine import RadioStateMachine
-from vigie_thread import VigieThread
 
 class UserInputListener(Thread):
 

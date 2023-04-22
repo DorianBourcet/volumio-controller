@@ -13,13 +13,13 @@ class MainThread(Thread):
   def __init__(self):
     super().__init__()
     display = DisplayState()
-    display.display_temporary_text('ROSS x Volumio')
+    display.display_persistent_texts(stop_daemons=False,duration=0.25)
     self._volumio = VolumioThread()
     self._volumio.daemon = True
     self._volumio.start()
-    self._radio = RadioStateMachine(self._volumio,display)
-    vigie = VigieThread(self._volumio,self._radio)
-    vigie.daemon = True
+    vigie_stop_event = Event()
+    self._radio = RadioStateMachine(self._volumio,display,vigie_stop_event)
+    vigie = VigieThread(self._volumio,self._radio,vigie_stop_event)
     vigie.start()
     input_1 = UserInputListener(UserInput(0x36),self._radio,1)
     input_1.daemon = True
@@ -33,6 +33,7 @@ class MainThread(Thread):
     input_4 = UserInputListener(UserInput(0x3a),self._radio,4)
     input_4.daemon = True
     input_4.start()
+    self.daemon = True
 
   def run(self):
     while True:

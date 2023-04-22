@@ -9,11 +9,13 @@ from track_selector_thread import TrackSelectorThread
 from threading import Event
 import time
 import utils
+import os
 
 class RadioStateMachine(object):
 
   states = [
     'connecting',
+    'shutting_down',
     {
       'name': 'home',
       'children': [
@@ -27,6 +29,7 @@ class RadioStateMachine(object):
 
   transitions = [
     { 'trigger': 'wait_for_connection', 'source': '*', 'dest': 'connecting' },
+    { 'trigger': 'shut_down', 'source': '*', 'dest': 'shutting_down' },
     { 'trigger': 'back_home', 'source': '*', 'dest': 'home' },
     { 'trigger': 'refresh_home', 'source': ['home', 'home_*'], 'dest': 'home' },
     { 'trigger': 'play_track', 'source': ['home', 'home_sleeping', 'home_holding'], 'dest': 'home_playing', 'conditions': 'can_play' },
@@ -40,11 +43,12 @@ class RadioStateMachine(object):
     { 'trigger': 'close_menu', 'source': 'menu', 'dest': 'home' },
   ]
 
-  def __init__(self, volumio: VolumioThread, display: DisplayState) -> None:
+  def __init__(self, volumio: VolumioThread, display: DisplayState, vigie_stop_event: Event) -> None:
     self._volumio = volumio
     self._display = display
     self._latest_active_to_quiet_stop_event = Event()
     self._latest_track_selector_stop_event = Event()
+    self._vigie_stop_event = vigie_stop_event
     self._quiet_event = Event()
     self._last_input_time = time.time()
     self.machine = HierarchicalMachine(
@@ -73,7 +77,16 @@ class RadioStateMachine(object):
     active_to_quiet_thread.start()
   
   def on_enter_connecting(self, event):
-    self._display.display_persistent_texts(texts=['En attente de Volumio...'],continuous_marquee=True)
+    self._display.display_persistent_texts(texts=['.  ','.. ','...',' ..','  .',''],duration=0.25,continuous_marquee=False)
+  
+  def on_enter_shutting_down(self, event):
+    self._display.display_temporary_text(text='BYE BYE',duration=2.0)
+    self._vigie_stop_event.set()
+    time.sleep(1.0)
+    self._display.clear_persistent_display()
+    self._volumio.stop()
+    time.sleep(1.0)
+    os.system('sudo shutdown now')
 
   def _event_to_context(self, event) -> dict:
     return {
@@ -189,7 +202,7 @@ class RadioStateMachine(object):
     if state == 'connecting':
       return
     if input_number == 1:
-      print('Button 1 pressed')
+      self.user_input_1_pressed()
     elif input_number == 2:
       self.user_input_2_pressed()
     elif input_number == 3:
@@ -219,6 +232,9 @@ class RadioStateMachine(object):
   
   def user_input_1_left(self):
     self.turn_volume_down(silent=False)
+  
+  def user_input_1_pressed(self):
+    self.shut_down()
 
   def user_input_2_right(self):
     self._volumio.seek_up()
