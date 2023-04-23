@@ -10,6 +10,7 @@ from threading import Event
 import time
 import utils
 import os
+import graceful_killer
 
 class RadioStateMachine(object):
 
@@ -80,13 +81,10 @@ class RadioStateMachine(object):
     self._display.display_persistent_texts(texts=['.  ','.. ','...',' ..','  .',''],duration=0.25,continuous_marquee=False)
   
   def on_enter_shutting_down(self, event):
-    self._display.display_temporary_text(text='BYE BYE',duration=2.0)
-    self._vigie_stop_event.set()
-    time.sleep(1.0)
-    self._display.clear_persistent_display()
+    self._display.display_persistent_texts(texts=['BYE BYE'])
     self._volumio.stop()
-    time.sleep(1.0)
-    os.system('sudo shutdown now')
+    graceful_killer.shutdown_machine = True
+    graceful_killer.kill_now = True
 
   def _event_to_context(self, event) -> dict:
     return {

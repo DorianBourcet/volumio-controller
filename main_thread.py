@@ -10,9 +10,8 @@ from user_input_listener import UserInputListener
 
 class MainThread(Thread):
 
-  def __init__(self):
+  def __init__(self, display: DisplayState):
     super().__init__()
-    display = DisplayState()
     display.display_persistent_texts(stop_daemons=False,duration=0.25)
     self._volumio = VolumioThread()
     self._volumio.daemon = True
@@ -43,4 +42,5 @@ class MainThread(Thread):
         time.sleep(1)
       self._radio.wait_for_connection()
       time.sleep(1)
+    print('exited main_thread')
 
