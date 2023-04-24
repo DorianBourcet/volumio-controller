@@ -6,7 +6,15 @@ import utils
 
 class DisplayThread(Thread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 4.0, align_left: bool = False, wave:bool=False):
+  def __init__(
+    self, 
+    display_state,
+    text_to_display: str,
+    stop_event: Event,
+    duration: float = 4.0,
+    align_left: bool = False,
+    wave:bool = False
+  ):
     super().__init__()
     self._display_state = display_state
     self._text_to_display = text_to_display

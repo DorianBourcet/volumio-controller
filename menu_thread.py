@@ -23,7 +23,7 @@ class MenuThread(Thread):
     self._current_volumio_folder = ''
     self._volumio_menu = VolumioMenu('volumio')
     self._last_input_time = None
-    self._close_after_sec = 15.0
+    self._close_after_sec = 30.0
     self.daemon = True
   
   def _home(self):

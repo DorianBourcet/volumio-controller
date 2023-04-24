@@ -96,6 +96,10 @@ class DisplayState:
     printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave)
     printer.start()
   
+  def clear_temporary_display(self):
+    self.issue_temporary_display_daemon_stop_event()
+    self._issue_stop_event()
+  
   def clear_persistent_display(self):
     self.issue_persistent_display_daemon_stop_event()
     self.set_persistent_texts(texts=[''])

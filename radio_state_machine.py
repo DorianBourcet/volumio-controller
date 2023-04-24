@@ -6,8 +6,8 @@ from datetime_display_thread import DatetimeDisplayThread
 from active_to_quiet_display_thread import ActiveToQuietDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from track_selector_thread import TrackSelectorThread
+from unlocker import Unlocker
 from threading import Event
-import time
 import utils
 import os
 import graceful_killer
@@ -50,8 +50,8 @@ class RadioStateMachine(object):
     self._latest_active_to_quiet_stop_event = Event()
     self._latest_track_selector_stop_event = Event()
     self._vigie_stop_event = vigie_stop_event
-    self._quiet_event = Event()
-    self._last_input_time = time.time()
+    self._is_locked_event = Event()
+    self._unlocker = Unlocker(self._display,self._is_locked_event)
     self.machine = HierarchicalMachine(
       model=self,
       send_event=True,
@@ -59,7 +59,7 @@ class RadioStateMachine(object):
       initial='connecting',
       transitions=RadioStateMachine.transitions
     )
-    self._wake_up()
+    self._bump()
 
   def _issue_new_active_to_quiet_stop_event(self):
     self._latest_active_to_quiet_stop_event.set()
@@ -69,13 +69,23 @@ class RadioStateMachine(object):
     self._latest_track_selector_stop_event.set()
     self._latest_track_selector_stop_event = Event()
 
-  def _is_quiet(self):
-    return self._quiet_event.is_set()
-
-  def _wake_up(self):
-    self._issue_new_active_to_quiet_stop_event()
-    active_to_quiet_thread = ActiveToQuietDisplayThread(self._display,self._latest_active_to_quiet_stop_event,self._quiet_event)
-    active_to_quiet_thread.start()
+  def _is_locked(self):
+    return self._is_locked_event.is_set()
+  
+  def _bump(self):
+    if self._is_locked():
+      self._bump_unlocker()
+    else:
+      self._issue_new_active_to_quiet_stop_event()
+      active_to_quiet_thread = ActiveToQuietDisplayThread(
+        self._display,
+        self._latest_active_to_quiet_stop_event,
+        self._is_locked_event
+      )
+      active_to_quiet_thread.start()
+  
+  def _bump_unlocker(self):
+    self._unlocker.bump()
   
   def on_enter_connecting(self, event):
     self._display.display_persistent_texts(texts=['.  ','.. ','...',' ..','  .',''],duration=0.25,continuous_marquee=False)
@@ -158,10 +168,9 @@ class RadioStateMachine(object):
     self._menu.back()
 
   def user_input_right(self, input_number: int):
-    if self._is_quiet():
-      self._wake_up()
+    self._bump()
+    if self._is_locked():
       return
-    self._wake_up()
     state = self.state
     if state == 'connecting':
       return
@@ -175,10 +184,9 @@ class RadioStateMachine(object):
         self.user_input_4_right()
   
   def user_input_left(self, input_number: int):
-    if self._is_quiet():
-      self._wake_up()
+    self._bump()
+    if self._is_locked():
       return
-    self._wake_up()
     state = self.state
     if state == 'connecting':
       return
@@ -192,10 +200,9 @@ class RadioStateMachine(object):
         self.user_input_4_left()
   
   def user_input_pressed(self, input_number: int):
-    if self._is_quiet():
-      self._wake_up()
+    self._bump()
+    if self._is_locked():
       return
-    self._wake_up()
     state = self.state
     if state == 'connecting':
       return
@@ -209,10 +216,8 @@ class RadioStateMachine(object):
       self.user_input_4_pressed()
   
   def user_input_released(self, input_number: int):
-    if self._is_quiet():
-      self._wake_up()
+    if self._is_locked():
       return
-    self._wake_up()
     state = self.state
     if state == 'connecting':
       return
