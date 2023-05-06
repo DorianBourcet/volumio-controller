@@ -8,7 +8,6 @@ class Unlocker:
     self._display = display
     self._locked_event = locked_event
     self._has_run_event = Event()
-    self._bump_number = 0
     self._can_unlock = False
     self._thread = None
 
@@ -52,13 +51,14 @@ class UnlockerThread(Thread):
       self._reached_unlock = True
     
   def _increase_bump_number(self):
-    self._bump_number += 2
+    increased = self._bump_number + 4
+    self._bump_number = min(increased,12)
     self._display.display_temporary_text(text=self._bump_number*'.',duration=0.5)
     print('increased bump number')
   
   def _decrease_bump_number(self):
     self._bump_number -= 2
-    self._display.display_temporary_text(text=self._bump_number*'.',duration=0.5)
+    self._display.display_temporary_text(text=self._bump_number*'.',duration=0.05)
     print('decreased bump number')
   
   def _should_decrease(self):

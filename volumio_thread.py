@@ -172,13 +172,8 @@ class VolumioThread(Thread):
     self._socketIO.emit('prev')
   
   def get_track(self, index: int):
-    try:
-      track = self._volumio_queue[index]
-      if self._volumio_service != track['service']:
-        return None
-      return track.get('title', track.get('name'))
-    except:
-      return None
+    track = self._volumio_queue[index]
+    return track.get('title', track.get('name'))
   
   def can_browse_queue(self) -> bool:
     return self._volumio_service != 'spop' and self.queue_is_not_empty()

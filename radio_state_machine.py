@@ -72,7 +72,9 @@ class RadioStateMachine(object):
   def _is_locked(self):
     return self._is_locked_event.is_set()
   
-  def _bump(self):
+  def _bump(self, force_unlock: bool = False):
+    if force_unlock:
+      self._is_locked_event.clear()
     if self._is_locked():
       self._bump_unlocker()
     else:
@@ -200,9 +202,7 @@ class RadioStateMachine(object):
         self.user_input_4_left()
   
   def user_input_pressed(self, input_number: int):
-    self._bump()
-    if self._is_locked():
-      return
+    self._bump(True)
     state = self.state
     if state == 'connecting':
       return
