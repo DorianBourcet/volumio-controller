@@ -278,7 +278,7 @@ class RadioStateMachine(object):
   def user_input_4_right(self):
     if self._volumio.can_browse_queue():
       idx = self._volumio.selected_index_next()
-      name = utils.shorten_text(self._volumio.get_track(idx))
+      name = utils.fit_text(self._volumio.get_track(idx))
       self._display.display_temporary_text(text=name,marquee_trim_start=True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
@@ -290,7 +290,7 @@ class RadioStateMachine(object):
   def user_input_4_left(self):
     if self._volumio.can_browse_queue():
       idx = self._volumio.selected_index_previous()
-      name = utils.shorten_text(self._volumio.get_track(idx))
+      name = utils.fit_text(self._volumio.get_track(idx))
       self._display.display_temporary_text(text=name,marquee_trim_start=True)
       self._issue_new_track_selector_stop_event()
       track_selector = TrackSelectorThread(idx,name,self._volumio,self._display,self._latest_track_selector_stop_event)
