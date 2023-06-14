@@ -26,5 +26,5 @@ class TrackSelectorThread(Thread):
     while not self._stop_event.is_set() and not self.should_select():
       time.sleep(0.25)
     if not self._stop_event.is_set():
-      self._display.display_temporary_text(text=self._name, wave=True, duration=3.5)
       self._volumio.play_track(self._index)
+      self._display.display_temporary_text(text=self._name, wave=True, duration=2.0)
