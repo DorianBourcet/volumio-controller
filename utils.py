@@ -19,14 +19,14 @@ def get_max_length(words:list):
 
 def fit_text(text:str) -> str:
     length = get_length(text)
-    if length <= 5 and ' ' not in text:
+    if length <= 3 and ' ' not in text:
         return spread_text(text)
     elif length > 12:
         return shorten_text(text)
     return text
 
 def spread_text(text:str) -> str:
-    if get_length(text) <= 5  and ' ' not in text:
+    if get_length(text) <= 3  and ' ' not in text:
         text = re.findall('([^\.]\.|[^\.]|\.)', text)
         return ' '.join(text)
     return text
