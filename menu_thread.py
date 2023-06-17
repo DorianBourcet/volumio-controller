@@ -4,23 +4,75 @@ from volumio_thread import VolumioThread
 from radio_state_machine import RadioStateMachine
 from datetime import datetime
 from volumio_menu import VolumioMenu
-import volumio_api
 import pytz
 import time
 import math
 import utils
 
-class MenuThread(Thread):
+class Menu:
 
   def __init__(self, display:DisplayState, radio:RadioStateMachine):
+    self._display = display
+    self._radio = radio
+    self._has_run_event = Event()
+    self._selected_index = None
+    self._current_options = []
+    self._history = []
+    self._thread = None
+  
+  def _ensure_thread(self):
+    if self._thread is None or self._has_run_event.is_set():
+      if self._has_run_event.is_set():
+        self._has_run_event.clear()
+      self._thread = MenuThread(
+        self._display,
+        self._radio,
+        self._has_run_event,
+        self._selected_index,
+        self._current_options,
+        self._history
+      )
+      self._thread.start()
+
+  def display_next(self):
+    self._ensure_thread()
+    self._thread.display_next()
+
+  def display_previous(self):
+    self._ensure_thread()
+    self._thread.display_previous()
+
+  def select_current(self):
+    self._ensure_thread()
+    self._thread.select_current()
+
+  def back(self):
+    self._ensure_thread()
+    self._thread.back()
+  
+  def close(self):
+    self._ensure_thread()
+    self._thread.close()
+
+class MenuThread(Thread):
+
+  def __init__(
+    self,
+    display:DisplayState,
+    radio:RadioStateMachine,
+    has_run_event: Event = Event(),
+    selected_index: int = None,
+    current_options: list = [],
+    history: list = []
+  ):
     super().__init__()
     self._display = display
     self._radio = radio
+    self._has_run_event = has_run_event
     self._stop_event = None
-    self._selected_index = 0
-    self._current_options = []
-    self._history = []
-    self._current_volumio_folder = ''
+    self._selected_index = selected_index
+    self._current_options = current_options
+    self._history = history
     self._volumio_menu = VolumioMenu('volumio')
     self._last_input_time = None
     self._close_after_sec = 30.0
@@ -68,7 +120,7 @@ class MenuThread(Thread):
     })
     self._current_options = options
     # print(self._current_options)
-    self._display_first()
+    self.display_next()
 
   def _get_option_name(self, index: int):
     return self._current_options[index]['name']
@@ -76,13 +128,14 @@ class MenuThread(Thread):
   def _get_option(self, index: int):
     return self._current_options[index]
   
-  def _display_first(self):
-    self._selected_index = 0
-    self._display.set_persistent_texts(texts=[self._get_option_name(self._selected_index)],continuous_marquee=True)
-  
   def display_next(self):
     self._last_input_time = time.time()
-    next_selected_index = self._selected_index + 1
+    if not self._history:
+      return self._home()
+    if self._selected_index is None:
+      next_selected_index = 0
+    else:
+      next_selected_index = self._selected_index + 1
     if next_selected_index >= len(self._current_options):
       next_selected_index = 0
     self._selected_index = next_selected_index
@@ -92,7 +145,12 @@ class MenuThread(Thread):
   
   def display_previous(self):
     self._last_input_time = time.time()
-    previous_selected_index = self._selected_index - 1
+    if not self._history:
+      return self._home()
+    if self._selected_index is None:
+      previous_selected_index = len(self._current_options) - 1
+    else:
+      previous_selected_index = self._selected_index - 1
     if previous_selected_index < 0:
       previous_selected_index = len(self._current_options) - 1
     self._selected_index = previous_selected_index
@@ -105,6 +163,7 @@ class MenuThread(Thread):
     self._display.set_persistent_texts(texts=['...'],continuous_marquee=False)
     # print('select current')
     option = self._get_option(self._selected_index)
+    self._selected_index = None
     self._select(option)
   
   def _select_internal(self, uri: str):
@@ -124,6 +183,7 @@ class MenuThread(Thread):
   
   def back(self):
     self._last_input_time = time.time()
+    self._selected_index = None
     if not self._history:
       self.close()
     else:
@@ -146,9 +206,10 @@ class MenuThread(Thread):
     # print('opened menu thread')
     self._last_input_time = time.time()
     self._stop_event = self._display.issue_persistent_display_daemon_stop_event()
-    self._home()
+    # self._home()
     while not self._stop_event.is_set():
       if self._should_close():
         self.close()
       time.sleep(0.25)
+    self._has_run_event.set()
     # print('closed menu thread')

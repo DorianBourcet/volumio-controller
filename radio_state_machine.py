@@ -52,6 +52,7 @@ class RadioStateMachine(object):
     self._vigie_stop_event = vigie_stop_event
     self._is_locked_event = Event()
     self._unlocker = Unlocker(self._display,self._is_locked_event)
+    self._menu = None
     self.machine = HierarchicalMachine(
       model=self,
       send_event=True,
@@ -137,17 +138,17 @@ class RadioStateMachine(object):
     datetime_thread.start()
 
   def on_enter_menu(self, event):
-    from menu_thread import MenuThread
+    from menu_thread import Menu
     self._display.issue_persistent_display_daemon_stop_event()
-    self._display.display_temporary_text(text='MENU',wave=True,duration=0.5)
-    self._menu = MenuThread(self._display,self)
-    self._menu.start()
+    # self._display.display_temporary_text(text='MENU',wave=True,duration=0.5)
+    if self._menu is None:
+      self._menu = Menu(self._display,self)
   
   def on_exit_menu(self, event):
     context = self._event_to_context(event)
     if not context['silent']:
       self._menu.close()
-      self._menu = None
+      # self._menu = None
   
   def can_play(self, event=None):
     return self._volumio.is_playing() or self._volumio.is_on_pause() or self._volumio.queue_is_not_empty()
@@ -246,6 +247,8 @@ class RadioStateMachine(object):
   
   def user_input_3_right(self):
     state = self.state
+    if state != 'menu':
+      self.open_menu()
     if state == 'menu':
       self._menu.display_next()
 
@@ -256,6 +259,8 @@ class RadioStateMachine(object):
 
   def user_input_3_left(self):
     state = self.state
+    if state != 'menu':
+      self.open_menu()
     if state == 'menu':
       self._menu.display_previous()
 
