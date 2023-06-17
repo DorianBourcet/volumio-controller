@@ -129,7 +129,11 @@ class VolumioThread(Thread):
     if self._volumio_service == 'metaradio':
       track_type = utils.spread_text(self._volumio_track_type)
       parts.append(track_type)
-    parts.extend([self._volumio_title,self._volumio_artist])
+    if self._volumio_track_type != self._volumio_title:
+      parts.append(self._volumio_title)
+    if self._volumio_track_type != self._volumio_artist:
+      parts.append(self._volumio_artist)
+
     return [i for i in parts if i]
 
   def get_volume(self):
