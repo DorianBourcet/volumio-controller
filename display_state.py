@@ -49,7 +49,7 @@ class DisplayState:
     self.display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
 
-  def display_persistent_texts(self, texts: list=None, duration: float = None, continuous_marquee:bool = None, stop_daemons: bool = True):
+  def display_persistent_texts(self, texts: list=None, duration: float = None, continuous_marquee: bool = None, marquee_trim_start: bool = False, stop_daemons: bool = True):
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee
     if duration is not None:
@@ -64,7 +64,7 @@ class DisplayState:
       printer = ContinuousMarqueeDisplayThread(self,' '.join(self._persistent_texts),self._issue_stop_event())
       printer.start()
     else:
-      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event(),self._persistent_text_duration)
+      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event(),self._persistent_text_duration, marquee_trim_start)
       printer.start()
 
   def set_persistent_texts(self, texts: list, duration: float = None, continuous_marquee: bool = None):
@@ -86,6 +86,7 @@ class DisplayState:
     marquee_trim_start: bool = False,
     wave: bool = False,
     align_left: bool = False,
+    trim_next_persistent_marquee: bool = False,
     stop_daemons: bool = True
   ):
     if stop_daemons:
@@ -93,7 +94,7 @@ class DisplayState:
     self.displaying_persistent = False
     self.temporary_text = text
     self.temporary_text_duration = duration
-    printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave)
+    printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave, trim_next_persistent_marquee)
     printer.start()
   
   def clear_temporary_display(self):

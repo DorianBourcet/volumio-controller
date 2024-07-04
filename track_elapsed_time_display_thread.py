@@ -19,7 +19,10 @@ class TrackElapsedTimeDisplayThread(Thread):
     else:
       percentage = ''
     elapsed_text = format_min_sec(elapsed).rjust(6,' ')
-    duration_text = format_min_sec(duration).rjust(6,' ')
+    if duration != 0:
+      duration_text = format_min_sec(duration).rjust(6,' ')
+    else:
+      duration_text = '--.--'
     percentage_text = str(percentage).rjust(3,' ')
     return elapsed_text+'  '+duration_text
   

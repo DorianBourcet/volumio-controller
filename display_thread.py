@@ -13,7 +13,7 @@ class DisplayThread(Thread):
     stop_event: Event,
     duration: float = 4.0,
     align_left: bool = False,
-    wave:bool = False
+    wave: bool = False
   ):
     super().__init__()
     self._display_state = display_state

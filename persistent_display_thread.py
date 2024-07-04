@@ -3,9 +3,13 @@ from threading import Event
 
 class PersistentDisplayThread(DisplayThread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 4.0):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 4.0, marquee_trim_start: bool = False):
     super().__init__(display_state,text_to_display,stop_event,duration)
+    self._marquee_trim_start = marquee_trim_start
 
   def _after_run(self):
     if not self._stop_event.is_set():
       self._display_state.display_persistent_texts(stop_daemons=False,continuous_marquee=False)
+
+  def _on_marquee_must_trim_start(self):
+    return self._marquee_trim_start

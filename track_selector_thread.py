@@ -27,4 +27,4 @@ class TrackSelectorThread(Thread):
       time.sleep(0.25)
     if not self._stop_event.is_set():
       self._volumio.play_track(self._index)
-      self._display.display_temporary_text(text=self._name, wave=True, duration=2.0)
+      self._display.display_temporary_text(text=self._name, wave=True, duration=2.0, trim_next_persistent_marquee=True)
