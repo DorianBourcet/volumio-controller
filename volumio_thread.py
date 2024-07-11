@@ -1,6 +1,5 @@
-from socketIO_client import SocketIO
 from threading import Thread
-import json
+import socketio
 import time
 import math
 import utils
@@ -32,7 +31,7 @@ class VolumioThread(Thread):
     self._selected_index = 0
   
   def _init_socketIO(self):
-    self._socketIO = SocketIO('localhost', 3000)
+    self._socketIO = socketio.Client()
     self._socketIO.on('connect', self._on_connect)
     self._socketIO.on('disconnect', self._on_disconnect)
     self._socketIO.on('reconnect', self._on_reconnect)
@@ -40,6 +39,13 @@ class VolumioThread(Thread):
     self._socketIO.on('getState_response', self._on_state_response)
     self._socketIO.on('pushQueue', self._on_queue_response)
     self._socketIO.on('getQueue_response', self._on_queue_response)
+    connected = False
+    while not connected:
+      try:
+        self._socketIO.connect('http://localhost:3000')
+        connected = True
+      except Exception as ex:
+        time.sleep(2)
 
   def _on_connect(self):
     self._connected = True
@@ -127,8 +133,13 @@ class VolumioThread(Thread):
   def get_playing_track(self):
     parts = []
     if self._volumio_service == 'metaradio':
-      track_type = utils.spread_text(self._volumio_track_type)
-      parts.append(track_type)
+      # track_type = utils.spread_text(self._volumio_track_type)
+      # parts.append(track_type)
+      parts.append(self._volumio_track_type)
+    if self._volumio_track_type != self._volumio_title:
+      parts.append(self._volumio_title)
+    if self._volumio_track_type != self._volumio_artist:
+      parts.append(self._volumio_artist)
     if self._volumio_track_type != self._volumio_title:
       parts.append(self._volumio_title)
     if self._volumio_track_type != self._volumio_artist:
