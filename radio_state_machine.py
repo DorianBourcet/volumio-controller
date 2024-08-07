@@ -38,6 +38,8 @@ class RadioStateMachine(object):
     { 'trigger': 'stop_track', 'source': ['home', 'home_playing'], 'dest': 'home_sleeping' },
     { 'trigger': 'turn_volume_up', 'source': ['home', 'menu'], 'dest': None, 'before': 'volume_up' },
     { 'trigger': 'turn_volume_down', 'source': ['home', 'menu'], 'dest': None, 'before': 'volume_down' },
+    { 'trigger': 'fast_forward', 'source': ['home', 'menu'], 'dest': None, 'before': 'seek_up', 'conditions': 'is_playing' },
+    { 'trigger': 'rewind', 'source': ['home', 'menu'], 'dest': None, 'before': 'seek_down', 'conditions': 'is_playing' },
     { 'trigger': 'open_menu', 'source': 'home', 'dest': 'menu' },
     { 'trigger': 'enter_menu', 'source': 'menu', 'dest': None, 'before': 'select_menu' },
     { 'trigger': 'back_menu', 'source': 'menu', 'dest': None, 'before': 'cancel_menu' },
@@ -154,6 +156,9 @@ class RadioStateMachine(object):
 
   def can_pause(self, event=None):
     return self._volumio.is_on_pause() or (self._volumio.is_playing() and self._volumio.is_interactive_broadcast())
+
+  def is_playing(self, event=None):
+    return self._volumio.is_playing()
   
   def volume_up(self, event=None):
     self._volumio.volume_up()
@@ -162,6 +167,16 @@ class RadioStateMachine(object):
   def volume_down(self, event=None):
     self._volumio.volume_down()
     self._display.display_temporary_text('VOLUME '+str(self._volumio.get_volume()))
+  
+  def seek_up(self, event=None):
+    self._volumio.seek_up()
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
+    track_elapsed.start()
+  
+  def seek_down(self, event=None):
+    self._volumio.seek_down()
+    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
+    track_elapsed.start()
   
   def select_menu(self, event=None):
     self._menu.select_current()
@@ -240,9 +255,7 @@ class RadioStateMachine(object):
     self.shut_down()
 
   def user_input_2_right(self):
-    self._volumio.seek_up()
-    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
-    track_elapsed.start()
+    self.fast_forward()
   
   def user_input_3_right(self):
     state = self.state
@@ -250,9 +263,7 @@ class RadioStateMachine(object):
       self._menu.display_next()
 
   def user_input_2_left(self):
-    self._volumio.seek_down()
-    track_elapsed = PlayingTrackElapsedTimeDisplayThread(self._volumio,self._display)
-    track_elapsed.start()
+    self.rewind()
 
   def user_input_3_left(self):
     state = self.state

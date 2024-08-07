@@ -32,36 +32,51 @@ class DisplayThread(Thread):
     upper = text.upper().replace('N°','No')
     self._display_state.display.print(unidecode(upper))
 
-  def _animate(self, text: str):
-    self._print(text)
+  def _animate(self, text: str, align_left: bool, length: int):
+    if align_left:
+      full_text = self._text_left(text, length)
+    else:
+      full_text = self._text_center(text, length)
+    self._print(full_text)
     if self._stop_event.is_set():
       return
-    text = utils.split_text(text)
-    time.sleep(0.01)
-    for i in range(len(text)):
+    splitted_text = utils.split_text(text)
+    sleep_time = 0.2 / length
+    time.sleep(0.1)
+    for i in range(len(splitted_text)):
       if self._stop_event.is_set():
         return
-      str = ''.join(text[:i]) + ' ' + ''.join(text[i+1:])
+      if align_left:
+        str = self._text_left(''.join(splitted_text[:i]) + ' ' + ''.join(splitted_text[i+1:]), length)
+      else:
+        str = self._text_center(''.join(splitted_text[:i]) + ' ' + ''.join(splitted_text[i+1:]), length)
       self._print(str)
-      time.sleep(0.01)
+      time.sleep(sleep_time)
 
   def _on_marquee_must_trim_start(self):
     return False
+  
+  def _text_center(self, text: str, length: int):
+    total_spaces = 12-length
+    after_spaces = total_spaces//2
+    before_spaces = total_spaces-after_spaces
+    return ' '*before_spaces+text+' '*after_spaces
+  
+  def _text_left(self, text: str, length: int):
+    total_spaces = 12-length
+    return text+' '*total_spaces
 
   def _pretty_print(self, text: str, align_left: bool, length: int, animate: bool):
     duration = self._get_duration()
-    total_spaces = 12-length
     if align_left:
-      full_text = text+' '*total_spaces
+      full_text = self._text_left(text, length)
     else:
-      after_spaces = total_spaces//2
-      before_spaces = total_spaces-after_spaces
-      full_text = ' '*before_spaces+text+' '*after_spaces
+      full_text = self._text_center(text, length)
     start = time.time()
     if self._stop_event.is_set():
       return
     if animate:
-      self._animate(full_text)
+      self._animate(text, align_left, length)
     if self._stop_event.is_set():
       return
     self._print(full_text)

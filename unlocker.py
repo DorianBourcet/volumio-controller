@@ -13,7 +13,7 @@ class Unlocker:
 
   def bump(self):
     if not self._locked_event.is_set():
-      raise Exception('locked_event is not set, there is nothing to nothing to bump')
+      raise Exception('locked_event is not set, there is nothing to bump')
     if self._thread is None:
       print('no thread, creating...')
       self._thread = UnlockerThread(self._display,self._locked_event,self._has_run_event)

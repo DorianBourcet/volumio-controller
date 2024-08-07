@@ -67,8 +67,10 @@ class VolumioThread(Thread):
       self._volumio_status = status
       self._status_since = time.time()
     self._volumio_status = status
-    self._volumio_artist = (state.get('artist', '') or '').strip()
-    self._volumio_title = (state.get('title', '') or '').strip()
+    raw_artist = (state.get('artist', '') or '').strip()
+    self._volumio_artist = utils.truncate(raw_artist, 84)
+    raw_title = (state.get('title', '') or '').strip()
+    self._volumio_title = utils.truncate(raw_title, 84)
     self._volumio_service = (state.get('service', '') or '').strip()
     if self._volumio_queue_position != state.get('position', 0):
       self._volumio_queue_position = state.get('position', 0)

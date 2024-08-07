@@ -1,4 +1,5 @@
 import re
+import textwrap
 
 def format_min_sec(seconds: int) -> str:
     min, sec = divmod(seconds, 60)
@@ -9,6 +10,10 @@ def get_length(text:str):
     
 def split_text(text:str):
     return re.findall('([^\.]\.|[^\.]|\.)', text)
+
+def truncate(s, limit):    
+    truncated = textwrap.shorten(s, width=limit, placeholder="...")
+    return truncated
 
 def get_max_length(words:list):
     max = get_length(words[0])
