@@ -14,8 +14,8 @@ class TrackElapsedTimeDisplayThread(Thread):
   def _produce_elapsed_time_text(self) -> str:
     elapsed = self._volumio.get_seek()
     duration = self._volumio.get_duration()
-    elapsed_text = '--.--'
-    duration_text = '--.--'
+    elapsed_text = ' --.--'
+    duration_text = ' --.--'
     if elapsed <= duration:
       elapsed_text = format_min_sec(elapsed).rjust(6,' ')
     if duration != 0:

@@ -29,7 +29,7 @@ class DisplayThread(Thread):
     return self._duration
 
   def _print(self, text: str):
-    upper = text.upper().replace('N°','No')
+    upper = text.upper().replace('N°','No').replace(':','..')
     self._display_state.display.print(unidecode(upper))
 
   def _animate(self, text: str, align_left: bool, length: int):
@@ -106,6 +106,7 @@ class DisplayThread(Thread):
   def run(self):
     if self._stop_event.is_set():
       return
+    self._display_state.currently_selected_text = self._text_to_display
     length = utils.get_length(self._text_to_display)
     if length <= 12:
       if self._wave and not self._waved:

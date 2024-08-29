@@ -23,7 +23,7 @@ class DisplayState:
     self._persistent_text_duration = 4.0
     self.temporary_text_duration = 2.0
     self.temporary_text = None
-    self._overlay = None
+    self.currently_selected_text = None
     self.set_quiet_mode()
 
   def _issue_stop_event(self) -> Event:
@@ -76,8 +76,11 @@ class DisplayState:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)
       if self.displaying_persistent:
-        self._issue_stop_event()
-        self.display_persistent_texts(stop_daemons=False)
+        if texts[0] == self.currently_selected_text:
+          next(self._persistent_texts_iterable)
+        else:
+          self._issue_stop_event()
+          self.display_persistent_texts(stop_daemons=False)
 
   def display_temporary_text(
     self,
