@@ -1,5 +1,4 @@
 from main_thread import MainThread
-from volumio_menu import VolumioMenu
 from display_state import DisplayState
 import graceful_killer
 import time
@@ -16,6 +15,6 @@ if __name__ == '__main__':
   while not graceful_killer.kill_now:
     time.sleep(1)
   time.sleep(2.0)
-  display.display.print('            ')
+  display.print()
   if graceful_killer.shutdown_machine:
     os.system('sudo shutdown -h now')

@@ -13,7 +13,7 @@ class TemporaryDisplayThread(DisplayThread):
     wave: bool = False,
     trim_next_persistent_marquee: bool = False
   ):
-    super().__init__(display_state,text_to_display,stop_event,display_state.temporary_text_duration,align_left,wave)
+    super().__init__(display_state,text_to_display,stop_event,display_state.temporary_text_duration,align_left,wave,True)
     self._marquee_trim_start = marquee_trim_start
     self._trim_next_persistent_marquee = trim_next_persistent_marquee
 

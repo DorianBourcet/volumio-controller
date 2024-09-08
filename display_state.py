@@ -9,10 +9,11 @@ from threading import Event
 from itertools import cycle
 
 class DisplayState:
+  EMPTY_TEXT = '            '
 
   def __init__(self):
     i2c = io.I2C(board.SCL, board.SDA)
-    self.display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
+    self._display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
     self._stop_event = Event()
     self._persistent_display_daemon_stop_event = Event()
     self._temporary_display_daemon_stop_event = Event()
@@ -22,6 +23,7 @@ class DisplayState:
     self._persistent_texts_continuous_marquee = False
     self._persistent_text_duration = 4.0
     self._sleep_mode = False
+    self._latest_text = self.EMPTY_TEXT
     self.temporary_text_duration = 2.0
     self.temporary_text = None
     self.currently_selected_text = None
@@ -31,6 +33,16 @@ class DisplayState:
     self._stop_event.set()
     self._stop_event = Event()
     return self._stop_event
+
+  def print(self, text: str = None, bypass_sleep_mode: bool = False):
+    if text is not None:
+      self._latest_text = text
+    else:
+      text = self.EMPTY_TEXT
+    if not self._sleep_mode or bypass_sleep_mode:
+      self._display.print(text)
+    else:
+      self._display.print(self.EMPTY_TEXT)
   
   def issue_persistent_display_daemon_stop_event(self) -> Event:
     self._persistent_display_daemon_stop_event.set()
@@ -43,20 +55,22 @@ class DisplayState:
     return self._temporary_display_daemon_stop_event
 
   def set_quiet_mode(self):
-    self.display.brightness = 0.05
+    self._display.brightness = 0.05
     self.marquee_sleep_delay = 0.20
 
   def set_active_mode(self):
-    self.display.brightness = 0.5
+    self._display.brightness = 0.5
     self.marquee_sleep_delay = 0.13
   
   def enable_sleep_mode(self):
     if not self._sleep_mode:
       self._sleep_mode = True
+      self.print()
 
   def disable_sleep_mode(self):
     if self._sleep_mode:
       self._sleep_mode = False
+      self.print(self._latest_text)
 
   def display_persistent_texts(self, texts: list=None, duration: float = None, continuous_marquee: bool = None, marquee_trim_start: bool = False, stop_daemons: bool = True):
     if continuous_marquee is not None:
@@ -73,8 +87,7 @@ class DisplayState:
       printer = ContinuousMarqueeDisplayThread(self,' '.join(self._persistent_texts),self._issue_stop_event())
       printer.start()
     else:
-      selected_text = '' if self._sleep_mode else next(self._persistent_texts_iterable)
-      printer = PersistentDisplayThread(self,selected_text,self._issue_stop_event(),self._persistent_text_duration, marquee_trim_start)
+      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event(),self._persistent_text_duration, marquee_trim_start)
       printer.start()
 
   def set_persistent_texts(self, texts: list, duration: float = None, continuous_marquee: bool = None):

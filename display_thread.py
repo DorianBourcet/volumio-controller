@@ -13,7 +13,8 @@ class DisplayThread(Thread):
     stop_event: Event,
     duration: float = 4.0,
     align_left: bool = False,
-    wave: bool = False
+    wave: bool = False,
+    bypass_sleep_mode: bool = False,
   ):
     super().__init__()
     self._display_state = display_state
@@ -22,6 +23,7 @@ class DisplayThread(Thread):
     self._duration = duration
     self._align_left = align_left
     self._wave = wave
+    self._bypass_sleep_mode = bypass_sleep_mode
     self._waved = False
     self.daemon = True
 
@@ -30,7 +32,7 @@ class DisplayThread(Thread):
 
   def _print(self, text: str):
     upper = text.upper().replace('N°','No').replace(':','..')
-    self._display_state.display.print(unidecode(upper))
+    self._display_state.print(unidecode(upper), self._bypass_sleep_mode)
 
   def _animate(self, text: str, align_left: bool, length: int):
     if align_left:
