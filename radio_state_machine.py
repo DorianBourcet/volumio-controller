@@ -257,18 +257,22 @@ class RadioStateMachine(object):
   def user_input_2_right(self):
     self.fast_forward()
   
+  def user_input_2_left(self):
+    self.rewind()
+  
   def user_input_3_right(self):
     state = self.state
     if state == 'menu':
       self._menu.display_next()
-
-  def user_input_2_left(self):
-    self.rewind()
+    else:
+      self._display.disable_sleep_mode()
 
   def user_input_3_left(self):
     state = self.state
     if state == 'menu':
       self._menu.display_previous()
+    else:
+      self._display.enable_sleep_mode()
 
   def user_input_2_pressed(self):
     state = self.state
