@@ -11,7 +11,7 @@ class DisplayThread(Thread):
     display_state,
     text_to_display: str,
     stop_event: Event,
-    duration: float = 4.0,
+    duration: float = 5.0,
     align_left: bool = False,
     wave: bool = False,
     bypass_sleep_mode: bool = False,
@@ -43,7 +43,7 @@ class DisplayThread(Thread):
     if self._stop_event.is_set():
       return
     splitted_text = utils.split_text(text)
-    sleep_time = 0.2 / length
+    sleep_time = 0.25 / length
     time.sleep(0.1)
     for i in range(len(splitted_text)):
       if self._stop_event.is_set():
@@ -88,9 +88,9 @@ class DisplayThread(Thread):
       now = time.time()
 
   def _pretty_marquee(self, text: str, trim_start: bool = False):
-    text = text+' '*14
+    text = text+' '*13
     if not trim_start:
-      text = ' '*13+text
+      text = ' '*12+text
     start = 0
     parts = re.findall('([^\.]\.|[^\.]|\.)', text)
     delay_start = trim_start

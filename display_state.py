@@ -21,7 +21,7 @@ class DisplayState:
     self._persistent_texts = ['.  ','.. ','...',' ..','  .','']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
     self._persistent_texts_continuous_marquee = False
-    self._persistent_text_duration = 4.0
+    self._persistent_text_duration = 5.0
     self._sleep_mode = False
     self._latest_text = self.EMPTY_TEXT
     self.temporary_text_duration = 2.0
@@ -60,7 +60,7 @@ class DisplayState:
 
   def set_active_mode(self):
     self._display.brightness = 0.5
-    self.marquee_sleep_delay = 0.13
+    self.marquee_sleep_delay = 0.15
   
   def enable_sleep_mode(self):
     if not self._sleep_mode:

@@ -3,7 +3,7 @@ from threading import Event
 
 class PersistentDisplayThread(DisplayThread):
 
-  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 4.0, marquee_trim_start: bool = False):
+  def __init__(self, display_state, text_to_display: str, stop_event: Event, duration: float = 5.0, marquee_trim_start: bool = False):
     super().__init__(display_state,text_to_display,stop_event,duration)
     self._marquee_trim_start = marquee_trim_start
 
