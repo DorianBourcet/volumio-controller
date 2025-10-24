@@ -13,8 +13,6 @@ args==0.1.0
 asn1crypto==0.24.0
 async-timeout==3.0.1
 attrs==18.2.0
-camilladsp==1.0.0
-camilladsp-plot==1.0.2
 certifi==2018.8.24
 chardet==3.0.4
 clint==0.5.1
