@@ -1,46 +1,87 @@
-from threading import Thread, Event
-from display_state import DisplayState
-from volumio_thread import VolumioThread
-from user_input import UserInput
-from utils import format_min_sec
 import time
+from threading import Event, Thread
+from typing import List
+
+import logging_setup
+from display_state import DisplayState
 from radio_state_machine import RadioStateMachine
-from vigie_thread import VigieThread
+from user_input import UserInput
 from user_input_listener import UserInputListener
+from vigie_thread import VigieThread
+from volumio_thread import VolumioThread
+
+logger = logging_setup.get_logger(__name__)
+
+ENCODER_ADDRESSES = (0x36, 0x37, 0x38, 0x3a)
+
 
 class MainThread(Thread):
 
   def __init__(self, display: DisplayState):
-    super().__init__()
-    display.display_persistent_texts(stop_daemons=False,duration=0.25)
+    super().__init__(name='main')
+    self._display = display
+    self._stop_event = Event()
+    self._listeners: List[UserInputListener] = []
+    self._volumio: VolumioThread = None
+    self._vigie: VigieThread = None
+    self._vigie_stop_event: Event = None
+    self._radio: RadioStateMachine = None
+    self.daemon = True
+
+  def _start_subsystems(self) -> None:
+    self._display.display_persistent_texts(stop_daemons=False, duration=0.25)
     self._volumio = VolumioThread()
     self._volumio.daemon = True
     self._volumio.start()
-    vigie_stop_event = Event()
-    self._radio = RadioStateMachine(self._volumio,display,vigie_stop_event)
-    vigie = VigieThread(self._volumio,self._radio,vigie_stop_event)
-    vigie.start()
-    input_1 = UserInputListener(UserInput(0x36),self._radio,1)
-    input_1.daemon = True
-    input_1.start()
-    input_2 = UserInputListener(UserInput(0x37),self._radio,2)
-    input_2.daemon = True
-    input_2.start()
-    input_3 = UserInputListener(UserInput(0x38),self._radio,3)
-    input_3.daemon = True
-    input_3.start()
-    input_4 = UserInputListener(UserInput(0x3a),self._radio,4)
-    input_4.daemon = True
-    input_4.start()
-    self.daemon = True
+    self._vigie_stop_event = Event()
+    self._radio = RadioStateMachine(self._volumio, self._display, self._vigie_stop_event)
+    self._vigie = VigieThread(self._volumio, self._radio, self._vigie_stop_event)
+    self._vigie.start()
+    for idx, addr in enumerate(ENCODER_ADDRESSES, start=1):
+      try:
+        listener = UserInputListener(UserInput(addr), self._radio, idx, self._stop_event)
+      except Exception:
+        logger.exception('failed to initialize encoder %d at 0x%02x', idx, addr)
+        continue
+      listener.daemon = True
+      listener.start()
+      self._listeners.append(listener)
+    logger.info('subsystems started (%d encoders active)', len(self._listeners))
 
-  def run(self):
-    while True:
-      if self._volumio.is_connected():
-        self._radio.back_home()
-      while self._volumio.is_connected():
+  def run(self) -> None:
+    try:
+      self._start_subsystems()
+      while not self._stop_event.is_set():
+        if self._volumio.is_connected():
+          self._radio.back_home()
+        while not self._stop_event.is_set() and self._volumio.is_connected():
+          time.sleep(1)
+        if self._stop_event.is_set():
+          break
+        logger.warning('lost connection to volumio, awaiting reconnect')
+        self._radio.wait_for_connection()
         time.sleep(1)
-      self._radio.wait_for_connection()
-      time.sleep(1)
-    print('exited main_thread')
+    except Exception:
+      logger.exception('main thread crashed')
 
+  def stop(self, timeout: float = 3.0) -> None:
+    logger.info('stopping main thread')
+    self._stop_event.set()
+    if self._vigie_stop_event is not None:
+      self._vigie_stop_event.set()
+    if self._volumio is not None:
+      try:
+        self._volumio.shutdown()
+      except Exception:
+        logger.exception('error while shutting down volumio thread')
+    threads: List[Thread] = []
+    threads.extend(self._listeners)
+    if self._vigie is not None:
+      threads.append(self._vigie)
+    if self._volumio is not None:
+      threads.append(self._volumio)
+    for t in threads:
+      try:
+        t.join(timeout=timeout)
+      except RuntimeError:
+        pass

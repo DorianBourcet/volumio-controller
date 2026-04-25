@@ -1,9 +1,17 @@
-import requests
+"""Backwards-compatible thin shim around volumio_client.
 
-def browse(uri: str):
-  response = requests.get('http://localhost:3000/api/v1/browse', params={'uri': uri}, timeout=10)
-  return response.json()
+Kept so that legacy imports (`import volumio_api`) keep working. Prefer
+`volumio_client.VolumioRestClient` for new code — it supports dependency
+injection, retries, and explicit error reporting.
+"""
+from typing import Any, Dict, List, Optional
 
-def play_items(items: list, index: int = 0):
-  response = requests.post('http://localhost:3000/api/v1/replaceAndPlay', json={'index':index,'list':items})
-  return response.ok
+import volumio_client
+
+
+def browse(uri: str) -> Optional[Dict[str, Any]]:
+  return volumio_client.default_client().browse(uri)
+
+
+def play_items(items: List[Dict[str, Any]], index: int = 0) -> bool:
+  return volumio_client.default_client().replace_and_play(items, index)

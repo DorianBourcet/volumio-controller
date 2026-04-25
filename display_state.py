@@ -1,78 +1,119 @@
+import time
+from itertools import cycle
+from threading import Event, Lock
+from typing import List, Optional
+
 import board
 import busio as io
 import adafruit_ht16k33.segments
-from threading import Event
+
+import logging_setup
 from continuous_marquee_display_thread import ContinuousMarqueeDisplayThread
 from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
-from threading import Event
-from itertools import cycle
+
+logger = logging_setup.get_logger(__name__)
+
 
 class DisplayState:
   EMPTY_TEXT = '            '
 
+  I2C_RETRY_AFTER_SEC = 0.05
+
   def __init__(self):
     i2c = io.I2C(board.SCL, board.SDA)
-    self._display = adafruit_ht16k33.segments.Seg14x4(i2c, address = [0x70,0x71,0x72])
+    self._display = adafruit_ht16k33.segments.Seg14x4(i2c, address=[0x70, 0x71, 0x72])
     self._stop_event = Event()
     self._persistent_display_daemon_stop_event = Event()
     self._temporary_display_daemon_stop_event = Event()
+    self._print_lock = Lock()
     self.displaying_persistent = False
-    self._persistent_texts = ['.  ','.. ','...',' ..','  .','']
+    self._persistent_texts: List[str] = ['.  ', '.. ', '...', ' ..', '  .', '']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
     self._persistent_texts_continuous_marquee = False
     self._persistent_text_duration = 5.0
     self._sleep_mode = False
-    self._latest_text = self.EMPTY_TEXT
+    self._latest_text: str = self.EMPTY_TEXT
     self.temporary_text_duration = 2.0
-    self.temporary_text = None
-    self.currently_selected_text = None
+    self.temporary_text: Optional[str] = None
+    self.currently_selected_text: Optional[str] = None
+    self.marquee_sleep_delay = 0.20
     self.set_quiet_mode()
+
+  def _safe_i2c_write(self, text: str) -> None:
+    """Write to the HT16K33 with one retry on transient I²C errors.
+
+    Volumio runs on a Pi where the I²C bus occasionally throws ENXIO/EIO.
+    Swallowing these is preferable to taking the whole controller down."""
+    try:
+      self._display.print(text)
+    except OSError as ex:
+      logger.warning('I²C write failed (%s), retrying once', ex)
+      time.sleep(self.I2C_RETRY_AFTER_SEC)
+      try:
+        self._display.print(text)
+      except OSError:
+        logger.exception('I²C write failed again, dropping frame')
 
   def _issue_stop_event(self) -> Event:
     self._stop_event.set()
     self._stop_event = Event()
     return self._stop_event
 
-  def print(self, text: str = None, bypass_sleep_mode: bool = False):
-    if text is not None:
-      self._latest_text = text
-    else:
-      text = self.EMPTY_TEXT
-    if not self._sleep_mode or bypass_sleep_mode:
-      self._display.print(text)
-    else:
-      self._display.print(self.EMPTY_TEXT)
-  
+  def print(self, text: Optional[str] = None, bypass_sleep_mode: bool = False) -> None:
+    with self._print_lock:
+      if text is not None:
+        self._latest_text = text
+      else:
+        text = self.EMPTY_TEXT
+      if self._sleep_mode and not bypass_sleep_mode:
+        text = self.EMPTY_TEXT
+      self._safe_i2c_write(text)
+
   def issue_persistent_display_daemon_stop_event(self) -> Event:
     self._persistent_display_daemon_stop_event.set()
     self._persistent_display_daemon_stop_event = Event()
     return self._persistent_display_daemon_stop_event
-  
+
   def issue_temporary_display_daemon_stop_event(self) -> Event:
     self._temporary_display_daemon_stop_event.set()
     self._temporary_display_daemon_stop_event = Event()
     return self._temporary_display_daemon_stop_event
 
-  def set_quiet_mode(self):
-    self._display.brightness = 0.15
-    self.marquee_sleep_delay = 0.20
+  def set_quiet_mode(self) -> None:
+    with self._print_lock:
+      try:
+        self._display.brightness = 0.05
+      except OSError:
+        logger.exception('failed to set quiet brightness')
+      self.marquee_sleep_delay = 0.20
 
-  def set_active_mode(self):
-    self._display.brightness = 0.5
-    self.marquee_sleep_delay = 0.15
-  
-  def enable_sleep_mode(self):
+  def set_active_mode(self) -> None:
+    with self._print_lock:
+      try:
+        self._display.brightness = 0.5
+      except OSError:
+        logger.exception('failed to set active brightness')
+      self.marquee_sleep_delay = 0.15
+
+  def enable_sleep_mode(self) -> None:
     if not self._sleep_mode:
       self._sleep_mode = True
       self.print()
 
-  def disable_sleep_mode(self):
+  def disable_sleep_mode(self) -> None:
     if self._sleep_mode:
       self._sleep_mode = False
       self.print(self._latest_text)
 
-  def display_persistent_texts(self, texts: list=None, duration: float = None, continuous_marquee: bool = None, marquee_trim_start: bool = False, stop_daemons: bool = True):
+  def display_persistent_texts(
+    self,
+    texts: Optional[List[str]] = None,
+    duration: Optional[float] = None,
+    continuous_marquee: Optional[bool] = None,
+    marquee_trim_start: bool = False,
+    stop_daemons: bool = True,
+  ) -> None:
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee
     if duration is not None:
@@ -84,13 +125,26 @@ class DisplayState:
     if texts is not None:
       self.set_persistent_texts(texts)
     elif self._persistent_texts_continuous_marquee:
-      printer = ContinuousMarqueeDisplayThread(self,' '.join(self._persistent_texts),self._issue_stop_event())
-      printer.start()
+      ContinuousMarqueeDisplayThread(
+        self,
+        ' '.join(self._persistent_texts),
+        self._issue_stop_event(),
+      ).start()
     else:
-      printer = PersistentDisplayThread(self,next(self._persistent_texts_iterable),self._issue_stop_event(),self._persistent_text_duration, marquee_trim_start)
-      printer.start()
+      PersistentDisplayThread(
+        self,
+        next(self._persistent_texts_iterable),
+        self._issue_stop_event(),
+        self._persistent_text_duration,
+        marquee_trim_start,
+      ).start()
 
-  def set_persistent_texts(self, texts: list, duration: float = None, continuous_marquee: bool = None):
+  def set_persistent_texts(
+    self,
+    texts: List[str],
+    duration: Optional[float] = None,
+    continuous_marquee: Optional[bool] = None,
+  ) -> None:
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee
     if duration is not None:
@@ -99,7 +153,7 @@ class DisplayState:
       self._persistent_texts = texts
       self._persistent_texts_iterable = cycle(texts)
       if self.displaying_persistent:
-        if texts[0] == self.currently_selected_text:
+        if texts and texts[0] == self.currently_selected_text:
           next(self._persistent_texts_iterable)
         else:
           self._issue_stop_event()
@@ -113,21 +167,34 @@ class DisplayState:
     wave: bool = False,
     align_left: bool = False,
     trim_next_persistent_marquee: bool = False,
-    stop_daemons: bool = True
-  ):
+    stop_daemons: bool = True,
+  ) -> None:
     if stop_daemons:
       self.issue_temporary_display_daemon_stop_event()
     self.displaying_persistent = False
     self.temporary_text = text
     self.temporary_text_duration = duration
-    printer = TemporaryDisplayThread(self, self.temporary_text, self._issue_stop_event(), marquee_trim_start, align_left, wave, trim_next_persistent_marquee)
-    printer.start()
-  
-  def clear_temporary_display(self):
+    TemporaryDisplayThread(
+      self,
+      self.temporary_text,
+      self._issue_stop_event(),
+      marquee_trim_start,
+      align_left,
+      wave,
+      trim_next_persistent_marquee,
+    ).start()
+
+  def clear_temporary_display(self) -> None:
     self.issue_temporary_display_daemon_stop_event()
     self._issue_stop_event()
-  
-  def clear_persistent_display(self):
+
+  def clear_persistent_display(self) -> None:
     self.issue_persistent_display_daemon_stop_event()
     self.set_persistent_texts(texts=[''])
 
+  def shutdown(self) -> None:
+    """Stop all display threads and blank the screen."""
+    self.issue_persistent_display_daemon_stop_event()
+    self.issue_temporary_display_daemon_stop_event()
+    self._issue_stop_event()
+    self.print()
