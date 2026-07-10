@@ -55,7 +55,7 @@ class DisplayState:
     return self._temporary_display_daemon_stop_event
 
   def set_quiet_mode(self):
-    self._display.brightness = 0.05
+    self._display.brightness = 0.15
     self.marquee_sleep_delay = 0.20
 
   def set_active_mode(self):
