@@ -1,6 +1,6 @@
 import time
 from threading import Thread
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import logging_setup
 import utils
@@ -22,10 +22,10 @@ class MenuThread(Thread):
     self._radio = radio
     self._stop_event = None
     self._selected_index = 0
-    self._current_options: List[Dict[str, Any]] = []
-    self._history: List[Dict[str, Any]] = []
+    self._current_options: list[dict[str, Any]] = []
+    self._history: list[dict[str, Any]] = []
     self._volumio_menu = VolumioMenu('volumio')
-    self._last_input_time: Optional[float] = None
+    self._last_input_time: float | None = None
     self.daemon = True
 
   def _home(self) -> None:
@@ -33,7 +33,7 @@ class MenuThread(Thread):
     self._render_options(options)
     self._history = []
 
-  def _select(self, selected_option: Dict[str, Any]) -> None:
+  def _select(self, selected_option: dict[str, Any]) -> None:
     provider = selected_option['provider']
     uri = selected_option['uri']
     result = self._browse_provider(provider, uri)
@@ -55,7 +55,7 @@ class MenuThread(Thread):
     logger.warning('unknown menu provider %r', provider)
     return None
 
-  def _render_options(self, options: List[Dict[str, Any]]) -> None:
+  def _render_options(self, options: list[dict[str, Any]]) -> None:
     if options is None:
       options = []
     options.append({
@@ -69,7 +69,7 @@ class MenuThread(Thread):
   def _get_option_name(self, index: int) -> str:
     return self._current_options[index]['name']
 
-  def _get_option(self, index: int) -> Dict[str, Any]:
+  def _get_option(self, index: int) -> dict[str, Any]:
     return self._current_options[index]
 
   def _display_first(self) -> None:

@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -26,7 +26,7 @@ class VolumioRestClient:
     self,
     base_url: str = DEFAULT_BASE_URL,
     timeout: float = DEFAULT_TIMEOUT,
-    session: Optional[requests.Session] = None,
+    session: requests.Session | None = None,
   ):
     self._base_url = base_url.rstrip('/')
     self._timeout = timeout
@@ -46,7 +46,7 @@ class VolumioRestClient:
     session.mount('https://', adapter)
     return session
 
-  def browse(self, uri: str = '/') -> Optional[Dict[str, Any]]:
+  def browse(self, uri: str = '/') -> dict[str, Any] | None:
     url = f'{self._base_url}/api/v1/browse'
     try:
       response = self._session.get(url, params={'uri': uri}, timeout=self._timeout)
@@ -66,7 +66,7 @@ class VolumioRestClient:
       return None
     return payload
 
-  def replace_and_play(self, items: List[Dict[str, Any]], index: int = 0) -> bool:
+  def replace_and_play(self, items: list[dict[str, Any]], index: int = 0) -> bool:
     url = f'{self._base_url}/api/v1/replaceAndPlay'
     try:
       response = self._session.post(
@@ -83,7 +83,7 @@ class VolumioRestClient:
     return True
 
 
-_default_client: Optional[VolumioRestClient] = None
+_default_client: VolumioRestClient | None = None
 
 
 def default_client() -> VolumioRestClient:

@@ -150,6 +150,23 @@ pytest -v
 deactivate
 ```
 
+### Docker: run against the target Python version
+
+The device runs Python 3.11 (Volumio OS 4 / Debian bookworm), which may differ from
+your host's Python. The provided `Dockerfile` + `docker-compose.yml` run the suite in
+a `python:3.11-slim-bookworm` container, similar to Volumio OS 4.
+Only `requirements-dev.txt` is installed, the Adafruit hardware packages are stubbed by `tests/conftest.py`.
+
+```bash
+# Run the whole suite in the target Python (3.11)
+docker compose run --rm tests
+
+# Rebuild the image after changing requirements-dev.txt
+docker compose build
+```
+
+The source tree is bind-mounted, so code and test edits are picked up without rebuilding.
+
 ## Dependencies
 
 Runtime (`requirements.txt`):

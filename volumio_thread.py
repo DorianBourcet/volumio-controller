@@ -2,7 +2,6 @@ import math
 import os
 import time
 from threading import RLock, Thread
-from typing import List, Optional, Tuple
 
 import socketio
 
@@ -16,7 +15,7 @@ DEFAULT_VOLUMIO_URL = os.environ.get('VC_VOLUMIO_URL', 'http://localhost:3000')
 
 class VolumioThread(Thread):
 
-  LINEAR_BROADCAST_SERVICES: Tuple[str, ...] = ('metaradio', 'webradio')
+  LINEAR_BROADCAST_SERVICES: tuple[str, ...] = ('metaradio', 'webradio')
 
   CONNECT_BACKOFF_INITIAL_SEC = 1.0
   CONNECT_BACKOFF_FACTOR = 2.0
@@ -25,7 +24,7 @@ class VolumioThread(Thread):
   def __init__(self, base_url: str = DEFAULT_VOLUMIO_URL):
     super().__init__(name='volumio')
     self._base_url = base_url
-    self._socketIO: Optional[socketio.Client] = None
+    self._socketIO: socketio.Client | None = None
     self._lock = RLock()
     self._connected = False
     self._stopping = False
@@ -36,7 +35,7 @@ class VolumioThread(Thread):
     self._volumio_title = ''
     self._volumio_queue_position = 0
     self._volumio_seek = 0
-    self._volumio_queue: List[dict] = []
+    self._volumio_queue: list[dict] = []
     self._volumio_service = ''
     self._volumio_track_type = ''
     self._volumio_duration = 0
@@ -180,9 +179,9 @@ class VolumioThread(Thread):
     with self._lock:
       return self._volumio_service not in self.LINEAR_BROADCAST_SERVICES
 
-  def get_playing_track(self) -> List[str]:
+  def get_playing_track(self) -> list[str]:
     with self._lock:
-      parts: List[str] = []
+      parts: list[str] = []
       if self._volumio_service == 'metaradio':
         parts.append(self._volumio_track_type)
       if self._volumio_track_type != self._volumio_title:
@@ -219,12 +218,12 @@ class VolumioThread(Thread):
     with self._lock:
       return self._volumio_queue_position
 
-  def get_next_track(self) -> Optional[str]:
+  def get_next_track(self) -> str | None:
     with self._lock:
       next_position = self._volumio_queue_position + 1
     return self.get_track(next_position)
 
-  def get_previous_track(self) -> Optional[str]:
+  def get_previous_track(self) -> str | None:
     with self._lock:
       previous_position = self._volumio_queue_position - 1
     return self.get_track(previous_position)
@@ -248,7 +247,7 @@ class VolumioThread(Thread):
       self._volumio_queue_position -= 1
     self._safe_emit('prev')
 
-  def get_track(self, index: int) -> Optional[str]:
+  def get_track(self, index: int) -> str | None:
     with self._lock:
       if not self._volumio_queue:
         return None

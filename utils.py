@@ -1,10 +1,9 @@
 import re
 import textwrap
-from typing import List
 
 DISPLAY_WIDTH = 12
 
-DEFAULT_IGNORABLE_PATTERNS: List[str] = [
+DEFAULT_IGNORABLE_PATTERNS: list[str] = [
   r'\sle', r'le\s', r'^le',
   r'\sla', r'la\s', r'^la',
   r'\sde', r'de\s',
@@ -24,7 +23,7 @@ def get_length(text: str) -> int:
   return len(_LENGTH_RE.findall(text))
 
 
-def split_text(text: str) -> List[str]:
+def split_text(text: str) -> list[str]:
   return _TEXT_PART_RE.findall(text)
 
 
@@ -32,7 +31,7 @@ def truncate(s: str, limit: int) -> str:
   return textwrap.shorten(s, width=limit, placeholder='...')
 
 
-def get_max_length(words: List[str]) -> int:
+def get_max_length(words: list[str]) -> int:
   return max((get_length(w) for w in words), default=0)
 
 
@@ -48,7 +47,7 @@ def spread_text(text: str) -> str:
   return text
 
 
-def shorten_text(text: str, ignorable_patterns: List[str] = None) -> str:
+def shorten_text(text: str, ignorable_patterns: list[str] | None = None) -> str:
   if ignorable_patterns is None:
     ignorable_patterns = DEFAULT_IGNORABLE_PATTERNS
   pattern = '(' + '|'.join(ignorable_patterns) + ')'

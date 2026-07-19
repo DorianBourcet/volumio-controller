@@ -1,6 +1,5 @@
 import time
 from threading import Event, Thread
-from typing import Optional
 
 import logging_setup
 from radio_state_machine import RadioStateMachine
@@ -18,7 +17,7 @@ class UserInputListener(Thread):
     user_input: UserInput,
     radio: RadioStateMachine,
     input_number: int,
-    stop_event: Optional[Event] = None,
+    stop_event: Event | None = None,
   ):
     super().__init__(name=f'input-{input_number}')
     self._user_input = user_input

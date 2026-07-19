@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Python hardware controller for [Volumio](https://volumio.com/) (open-source music server) running on a Raspberry Pi. It drives 4 Adafruit Seesaw rotary encoders (I²C) and 3 Adafruit HT16K33 12-character LED alphanumeric displays to provide physical playback control without a screen.
 
-Designed to run as a systemd service on Volumio OS 4. Target Python is 3.7+ — no `list[str]` syntax (use `List[str]` from `typing`).
+Designed to run as a systemd service on Volumio OS 4. Target Python is **3.11** (Volumio OS 4 ships Python 3.11.2 on Debian bookworm). Use modern typing: built-in generics (`list[str]`, `dict[str, Any]`, PEP 585) and `X | None` unions (PEP 604) — not `List`/`Dict`/`Optional` from `typing`. `typing.Any` is still imported from `typing` (no built-in equivalent).
 
 ## Running the project
 

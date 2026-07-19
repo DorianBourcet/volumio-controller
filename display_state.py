@@ -1,7 +1,6 @@
 import time
 from itertools import cycle
 from threading import Event, Lock
-from typing import List, Optional
 
 import board
 import busio as io
@@ -28,15 +27,15 @@ class DisplayState:
     self._temporary_display_daemon_stop_event = Event()
     self._print_lock = Lock()
     self.displaying_persistent = False
-    self._persistent_texts: List[str] = ['.  ', '.. ', '...', ' ..', '  .', '']
+    self._persistent_texts: list[str] = ['.  ', '.. ', '...', ' ..', '  .', '']
     self._persistent_texts_iterable = cycle(self._persistent_texts)
     self._persistent_texts_continuous_marquee = False
     self._persistent_text_duration = 5.0
     self._sleep_mode = False
     self._latest_text: str = self.EMPTY_TEXT
     self.temporary_text_duration = 2.0
-    self.temporary_text: Optional[str] = None
-    self.currently_selected_text: Optional[str] = None
+    self.temporary_text: str | None = None
+    self.currently_selected_text: str | None = None
     self.marquee_sleep_delay = 0.20
     self.set_quiet_mode()
 
@@ -60,7 +59,7 @@ class DisplayState:
     self._stop_event = Event()
     return self._stop_event
 
-  def print(self, text: Optional[str] = None, bypass_sleep_mode: bool = False) -> None:
+  def print(self, text: str | None = None, bypass_sleep_mode: bool = False) -> None:
     with self._print_lock:
       if text is not None:
         self._latest_text = text
@@ -108,9 +107,9 @@ class DisplayState:
 
   def display_persistent_texts(
     self,
-    texts: Optional[List[str]] = None,
-    duration: Optional[float] = None,
-    continuous_marquee: Optional[bool] = None,
+    texts: list[str] | None = None,
+    duration: float | None = None,
+    continuous_marquee: bool | None = None,
     marquee_trim_start: bool = False,
     stop_daemons: bool = True,
   ) -> None:
@@ -141,9 +140,9 @@ class DisplayState:
 
   def set_persistent_texts(
     self,
-    texts: List[str],
-    duration: Optional[float] = None,
-    continuous_marquee: Optional[bool] = None,
+    texts: list[str],
+    duration: float | None = None,
+    continuous_marquee: bool | None = None,
   ) -> None:
     if continuous_marquee is not None:
       self._persistent_texts_continuous_marquee = continuous_marquee

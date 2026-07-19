@@ -1,6 +1,5 @@
 import time
 from threading import Event, Thread
-from typing import List
 
 import logging_setup
 from display_state import DisplayState
@@ -21,7 +20,7 @@ class MainThread(Thread):
     super().__init__(name='main')
     self._display = display
     self._stop_event = Event()
-    self._listeners: List[UserInputListener] = []
+    self._listeners: list[UserInputListener] = []
     self._volumio: VolumioThread = None
     self._vigie: VigieThread = None
     self._vigie_stop_event: Event = None
@@ -74,7 +73,7 @@ class MainThread(Thread):
         self._volumio.shutdown()
       except Exception:
         logger.exception('error while shutting down volumio thread')
-    threads: List[Thread] = []
+    threads: list[Thread] = []
     threads.extend(self._listeners)
     if self._vigie is not None:
       threads.append(self._vigie)
