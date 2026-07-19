@@ -38,6 +38,9 @@ sys.modules['board'].SDA = object()
 sys.modules['board'].I2C = MagicMock(return_value=MagicMock())
 sys.modules['busio'].I2C = MagicMock(return_value=MagicMock())
 sys.modules['adafruit_ht16k33.segments'].Seg14x4 = MagicMock(return_value=MagicMock())
+# Link the submodule as an attribute so `adafruit_ht16k33.segments.Seg14x4`
+# attribute access resolves (DisplayState reaches it that way).
+sys.modules['adafruit_ht16k33'].segments = sys.modules['adafruit_ht16k33.segments']
 sys.modules['adafruit_seesaw.seesaw'].Seesaw = MagicMock()
 sys.modules['adafruit_seesaw.rotaryio'].IncrementalEncoder = MagicMock()
 sys.modules['adafruit_seesaw.digitalio'].DigitalIO = MagicMock()

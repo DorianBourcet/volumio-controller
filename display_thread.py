@@ -40,7 +40,7 @@ class DisplayThread(Thread):
     return self._duration
 
   def _print(self, text: str) -> None:
-    upper = text.upper().replace('N°', 'No').replace(':', '..')
+    upper = text.upper().replace('N°', 'No')
     self._display_state.print(unidecode(upper), self._bypass_sleep_mode)
 
   def _animate(self, text: str, align_left: bool, length: int) -> None:

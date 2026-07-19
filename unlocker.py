@@ -1,20 +1,28 @@
 import time
+from collections.abc import Callable
 from threading import Event, Thread
 
 import logging_setup
-from display_state import DisplayState
+from display_state import ActivityLevel, DisplayState
 
 logger = logging_setup.get_logger(__name__)
 
 
 class Unlocker:
 
-  def __init__(self, display: DisplayState, locked_event: Event):
+  def __init__(self, display: DisplayState, locked_event: Event, on_unlock: Callable[[], None]):
     self._display = display
     self._locked_event = locked_event
+    self._on_unlock = on_unlock
     self._has_run_event = Event()
     self._can_unlock = False
     self._thread = None
+
+  def _spawn_thread(self) -> None:
+    self._thread = UnlockerThread(
+      self._display, self._locked_event, self._has_run_event, self._on_unlock
+    )
+    self._thread.start()
 
   def bump(self) -> None:
     if not self._locked_event.is_set():
@@ -22,14 +30,12 @@ class Unlocker:
       return
     if self._thread is None:
       logger.debug('unlocker: spawning new thread')
-      self._thread = UnlockerThread(self._display, self._locked_event, self._has_run_event)
-      self._thread.start()
+      self._spawn_thread()
       return
     if self._has_run_event.is_set():
       self._has_run_event.clear()
       logger.debug('unlocker: thread finished, respawning')
-      self._thread = UnlockerThread(self._display, self._locked_event, self._has_run_event)
-      self._thread.start()
+      self._spawn_thread()
       return
     self._thread.bump()
 
@@ -42,11 +48,18 @@ class UnlockerThread(Thread):
   DECREASE_AFTER_SEC = 0.50
   POLL_INTERVAL_SEC = 0.05
 
-  def __init__(self, display: DisplayState, locked_event: Event, has_run_event: Event):
+  def __init__(
+    self,
+    display: DisplayState,
+    locked_event: Event,
+    has_run_event: Event,
+    on_unlock: Callable[[], None],
+  ):
     super().__init__(name='unlocker')
     self._display = display
     self._locked_event = locked_event
     self._has_run_event = has_run_event
+    self._on_unlock = on_unlock
     self._last_bump_time = None
     self._bump_number = 0
     self._reached_unlock = False
@@ -58,11 +71,14 @@ class UnlockerThread(Thread):
       return
     self._last_bump_time = time.time()
     self._increase_bump_number()
-    if self._bump_number >= self.UNLOCK_BUMPS:
+    if self._bump_number >= self.UNLOCK_BUMPS and not self._reached_unlock:
       self._locked_event.clear()
-      self._display.set_active_mode()
+      self._display.set_activity_level(ActivityLevel.CONTROL)
       self._reached_unlock = True
       logger.debug('unlocker: reached unlock threshold')
+      # Restart the 30 s inactivity window so the display returns to its
+      # resting level (e.g. STANDBY at home_sleeping) after the gesture unlock.
+      self._on_unlock()
 
   def _increase_bump_number(self) -> None:
     self._bump_number = min(self._bump_number + self.BUMP_STEP, self.UNLOCK_BUMPS)

@@ -5,9 +5,9 @@ from transitions.extensions import HierarchicalMachine
 import graceful_killer
 import logging_setup
 import utils
-from active_to_quiet_display_thread import ActiveToQuietDisplayThread
+from activity_timeout_thread import ActivityTimeoutThread
 from datetime_display_thread import DatetimeDisplayThread
-from display_state import DisplayState
+from display_state import ActivityLevel, DisplayState
 from playing_track_display_thread import PlayingTrackDisplayThread
 from playing_track_elapsed_time_display_thread import PlayingTrackElapsedTimeDisplayThread
 from track_selector_thread import TrackSelectorThread
@@ -54,24 +54,45 @@ class RadioStateMachine(object):
   def __init__(self, volumio: VolumioThread, display: DisplayState, vigie_stop_event: Event) -> None:
     self._volumio = volumio
     self._display = display
-    self._latest_active_to_quiet_stop_event = Event()
+    self._latest_activity_timeout_stop_event = Event()
     self._latest_track_selector_stop_event = Event()
     self._vigie_stop_event = vigie_stop_event
     self._is_locked_event = Event()
-    self._unlocker = Unlocker(self._display, self._is_locked_event)
+    self._unlocker = Unlocker(
+      self._display, self._is_locked_event, on_unlock=self._start_activity_timeout
+    )
     self._menu = None
     self.machine = HierarchicalMachine(
       model=self,
       send_event=True,
       states=RadioStateMachine.states,
       initial='connecting',
-      transitions=RadioStateMachine.transitions
+      transitions=RadioStateMachine.transitions,
+      after_state_change='_refresh_locked_activity',
     )
     self._bump()
 
-  def _issue_new_active_to_quiet_stop_event(self) -> None:
-    self._latest_active_to_quiet_stop_event.set()
-    self._latest_active_to_quiet_stop_event = Event()
+  def _issue_new_activity_timeout_stop_event(self) -> None:
+    self._latest_activity_timeout_stop_event.set()
+    self._latest_activity_timeout_stop_event = Event()
+
+  def reconcile_activity_level(self) -> None:
+    """Keep the resting brightness aligned with the state machine.
+
+    No-op while unlocked (CONTROL), so a state change during the active window
+    doesn't dim the display. While locked, the resting level is driven by the
+    machine state: STANDBY when stopped or paused (``home_sleeping`` /
+    ``home_holding``), LISTENING while actually playing.
+    Idempotent (``DisplayState`` skips no-op writes), so it is safe to call on
+    every ``VigieThread`` tick and from the ``after_state_change`` hook."""
+    if not self._is_locked():
+      return
+    resting_standby = self.state in ('home_sleeping', 'home_holding')
+    level = ActivityLevel.STANDBY if resting_standby else ActivityLevel.LISTENING
+    self._display.set_activity_level(level)
+
+  def _refresh_locked_activity(self, event) -> None:
+    self.reconcile_activity_level()
 
   def _issue_new_track_selector_stop_event(self) -> None:
     self._latest_track_selector_stop_event.set()
@@ -86,13 +107,20 @@ class RadioStateMachine(object):
     if self._is_locked():
       self._bump_unlocker()
     else:
-      self._issue_new_active_to_quiet_stop_event()
-      active_to_quiet_thread = ActiveToQuietDisplayThread(
-        self._display,
-        self._latest_active_to_quiet_stop_event,
-        self._is_locked_event
-      )
-      active_to_quiet_thread.start()
+      self._start_activity_timeout()
+
+  def _start_activity_timeout(self) -> None:
+    """Start the 30 s inactivity window: CONTROL now, resting level once it
+    elapses. Called whenever we become (or stay) unlocked — including after the
+    Unlocker's gesture unlock — so 'unlocked implies a live timer' always holds
+    and the display reliably returns to its resting level."""
+    self._issue_new_activity_timeout_stop_event()
+    ActivityTimeoutThread(
+      self._display,
+      self._latest_activity_timeout_stop_event,
+      self._is_locked_event,
+      apply_resting=self.reconcile_activity_level,
+    ).start()
 
   def _bump_unlocker(self) -> None:
     self._unlocker.bump()
@@ -125,23 +153,26 @@ class RadioStateMachine(object):
 
   def on_enter_home_playing(self, event) -> None:
     context = self._event_to_context(event)
+    # Only command Volumio on a user-initiated transition; when merely reflecting
+    # Volumio's own state (silent, e.g. VigieThread.refresh_home) re-issuing the
+    # command fights Volumio and causes a status flip-flop.
     if not context['silent']:
       self._display.display_temporary_text(text='LECTURE', wave=True)
-    self._volumio.resume()
+      self._volumio.resume()
     PlayingTrackDisplayThread(self._volumio, self._display).start()
 
   def on_enter_home_holding(self, event) -> None:
     context = self._event_to_context(event)
     if not context['silent']:
       self._display.display_temporary_text(text='PAUSE', wave=True)
-    self._volumio.pause()
+      self._volumio.pause()
     DatetimeDisplayThread(self._display).start()
 
   def on_enter_home_sleeping(self, event) -> None:
     context = self._event_to_context(event)
     if not context['silent']:
       self._display.display_temporary_text(text='STOP', wave=True)
-    self._volumio.hold_on()
+      self._volumio.hold_on()
     DatetimeDisplayThread(self._display).start()
 
   def on_enter_menu(self, event) -> None:

@@ -1,4 +1,5 @@
 import time
+from enum import Enum
 from itertools import cycle
 from threading import Event, Lock
 
@@ -12,6 +13,27 @@ from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
 
 logger = logging_setup.get_logger(__name__)
+
+
+class ActivityLevel(Enum):
+  """Display activity levels.
+
+  CONTROL is the only unlocked level (a button was pressed recently); the two
+  resting levels are locked. LISTENING is the resting level while music plays,
+  STANDBY the resting level while paused or stopped (``home_holding`` /
+  ``home_sleeping``)."""
+
+  CONTROL = 'control'
+  LISTENING = 'listening'
+  STANDBY = 'standby'
+
+
+# level -> (brightness, marquee_sleep_delay)
+_ACTIVITY_LEVEL_SETTINGS: dict[ActivityLevel, tuple[float, float]] = {
+  ActivityLevel.CONTROL: (1.0, 0.15),
+  ActivityLevel.LISTENING: (0.5, 0.20),
+  ActivityLevel.STANDBY: (0.05, 0.20),
+}
 
 
 class DisplayState:
@@ -37,7 +59,8 @@ class DisplayState:
     self.temporary_text: str | None = None
     self.currently_selected_text: str | None = None
     self.marquee_sleep_delay = 0.20
-    self.set_quiet_mode()
+    self._current_activity_level: ActivityLevel | None = None
+    self.set_activity_level(ActivityLevel.STANDBY)
 
   def _safe_i2c_write(self, text: str) -> None:
     """Write to the HT16K33 with one retry on transient I²C errors.
@@ -79,21 +102,17 @@ class DisplayState:
     self._temporary_display_daemon_stop_event = Event()
     return self._temporary_display_daemon_stop_event
 
-  def set_quiet_mode(self) -> None:
+  def set_activity_level(self, level: ActivityLevel) -> None:
+    if level is self._current_activity_level:
+      return
+    brightness, marquee_sleep_delay = _ACTIVITY_LEVEL_SETTINGS[level]
     with self._print_lock:
       try:
-        self._display.brightness = 0.05
+        self._display.brightness = brightness
       except OSError:
-        logger.exception('failed to set quiet brightness')
-      self.marquee_sleep_delay = 0.20
-
-  def set_active_mode(self) -> None:
-    with self._print_lock:
-      try:
-        self._display.brightness = 0.5
-      except OSError:
-        logger.exception('failed to set active brightness')
-      self.marquee_sleep_delay = 0.15
+        logger.exception('failed to set %s brightness', level.value)
+      self.marquee_sleep_delay = marquee_sleep_delay
+      self._current_activity_level = level
 
   def enable_sleep_mode(self) -> None:
     if not self._sleep_mode:

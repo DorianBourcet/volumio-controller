@@ -51,7 +51,7 @@ __main__.py                     — entry point, configures logging, runs gracef
     │   ├── PlayingTrackDisplayThread
     │   ├── PlayingTrackElapsedTimeDisplayThread
     │   ├── DatetimeDisplayThread
-    │   └── ActiveToQuietDisplayThread
+    │   └── ActivityTimeoutThread
     ├── menu_thread.py          — interactive library browser UI
     ├── vigie_thread.py         — monitors Volumio state changes
     ├── unlocker.py             — 12-step safety unlock

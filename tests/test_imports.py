@@ -24,6 +24,10 @@ def test_unlocker_imports():
   import unlocker  # noqa: F401
 
 
+def test_activity_timeout_thread_imports():
+  import activity_timeout_thread  # noqa: F401
+
+
 def test_vigie_thread_imports():
   import vigie_thread  # noqa: F401
 
