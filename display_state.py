@@ -16,12 +16,6 @@ logger = logging_setup.get_logger(__name__)
 
 
 class ActivityLevel(Enum):
-  """Display activity levels.
-
-  CONTROL is the only unlocked level (a button was pressed recently); the two
-  resting levels are locked. LISTENING is the resting level while music plays,
-  STANDBY the resting level while paused or stopped (``home_holding`` /
-  ``home_sleeping``)."""
 
   CONTROL = 'control'
   LISTENING = 'listening'
@@ -63,19 +57,19 @@ class DisplayState:
     self.set_activity_level(ActivityLevel.STANDBY)
 
   def _safe_i2c_write(self, text: str) -> None:
-    """Write to the HT16K33 with one retry on transient I²C errors.
+    """Write to the HT16K33 with one retry on transient I2C errors.
 
-    Volumio runs on a Pi where the I²C bus occasionally throws ENXIO/EIO.
-    Swallowing these is preferable to taking the whole controller down."""
+    Volumio runs on a Pi where the I2C bus occasionally throws ENXIO/EIO.
+    Ignoring these is preferable to taking the whole controller down."""
     try:
       self._display.print(text)
     except OSError as ex:
-      logger.warning('I²C write failed (%s), retrying once', ex)
+      logger.warning('I2C write failed (%s), retrying once', ex)
       time.sleep(self.I2C_RETRY_AFTER_SEC)
       try:
         self._display.print(text)
       except OSError:
-        logger.exception('I²C write failed again, dropping frame')
+        logger.exception('I2C write failed again, dropping frame')
 
   def _issue_stop_event(self) -> Event:
     self._stop_event.set()
@@ -201,14 +195,6 @@ class DisplayState:
       wave,
       trim_next_persistent_marquee,
     ).start()
-
-  def clear_temporary_display(self) -> None:
-    self.issue_temporary_display_daemon_stop_event()
-    self._issue_stop_event()
-
-  def clear_persistent_display(self) -> None:
-    self.issue_persistent_display_daemon_stop_event()
-    self.set_persistent_texts(texts=[''])
 
   def shutdown(self) -> None:
     """Stop all display threads and blank the screen."""

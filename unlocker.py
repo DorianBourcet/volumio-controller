@@ -3,6 +3,7 @@ from collections.abc import Callable
 from threading import Event, Thread
 
 import logging_setup
+from constants import INPUT_POLL_INTERVAL_SEC
 from display_state import ActivityLevel, DisplayState
 
 logger = logging_setup.get_logger(__name__)
@@ -15,7 +16,6 @@ class Unlocker:
     self._locked_event = locked_event
     self._on_unlock = on_unlock
     self._has_run_event = Event()
-    self._can_unlock = False
     self._thread = None
 
   def _spawn_thread(self) -> None:
@@ -46,7 +46,6 @@ class UnlockerThread(Thread):
   BUMP_STEP = 4
   DECREASE_STEP = 2
   DECREASE_AFTER_SEC = 0.50
-  POLL_INTERVAL_SEC = 0.05
 
   def __init__(
     self,
@@ -97,7 +96,7 @@ class UnlockerThread(Thread):
       while self._bump_number > 0 and not self._reached_unlock:
         if self._should_decrease():
           self._decrease_bump_number()
-        time.sleep(self.POLL_INTERVAL_SEC)
+        time.sleep(INPUT_POLL_INTERVAL_SEC)
       self._has_run_event.set()
     except Exception:
       logger.exception('unlocker thread crashed')

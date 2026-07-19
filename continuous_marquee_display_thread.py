@@ -3,6 +3,7 @@ import time
 from threading import Event
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_thread import DisplayThread
 
 logger = logging_setup.get_logger(__name__)
@@ -11,8 +12,6 @@ DISPLAY_WIDTH = 12
 
 
 class ContinuousMarqueeDisplayThread(DisplayThread):
-
-  POLL_INTERVAL_SEC = 0.25
 
   def __init__(self, display_state, text_to_display: str, stop_event: Event):
     super().__init__(display_state, text_to_display, stop_event)
@@ -36,7 +35,7 @@ class ContinuousMarqueeDisplayThread(DisplayThread):
       start += 1
       if start >= length:
         start = 0
-      time.sleep(self.POLL_INTERVAL_SEC)
+      time.sleep(DISPLAY_POLL_INTERVAL_SEC)
 
   def run(self) -> None:
     try:

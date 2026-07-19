@@ -3,20 +3,13 @@ from collections.abc import Callable
 from threading import Event, Thread
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import ActivityLevel, DisplayState
 
 logger = logging_setup.get_logger(__name__)
 
-POLL_INTERVAL_SEC = 0.25
-
 
 class ActivityTimeoutThread(Thread):
-  """Drives the display from CONTROL back to a locked resting level.
-
-  On start the display is set to CONTROL (bright, unlocked). After
-  ``timeout_sec`` without a new bump, the display locks and the resting level
-  is applied by ``apply_resting`` (which picks STANDBY vs LISTENING from the
-  real playback status)."""
 
   def __init__(
     self,
@@ -46,7 +39,7 @@ class ActivityTimeoutThread(Thread):
       self._lock_event.clear()
       self._start = time.time()
       while not self._stop_event.is_set() and not self._timed_out():
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
       if not self._stop_event.is_set():
         self._lock_event.set()
         self._apply_resting()

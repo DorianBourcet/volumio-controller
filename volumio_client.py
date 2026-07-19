@@ -14,13 +14,9 @@ DEFAULT_TIMEOUT = float(os.environ.get('VC_VOLUMIO_HTTP_TIMEOUT', '10'))
 
 
 class VolumioRestClient:
-  """Thin REST client for Volumio's HTTP API.
-
-  Handles transport concerns (timeout, retries, JSON validation) so callers
-  can focus on browse/playback semantics. Errors are logged and translated
-  to None / False rather than propagated, so that a Volumio outage doesn't
-  kill the controller.
-  """
+  """Thin REST client for Volumio's HTTP API: handles timeout, retries and
+  JSON validation, logging errors and returning None / False rather than
+  raising, so a Volumio outage can't kill the controller."""
 
   def __init__(
     self,

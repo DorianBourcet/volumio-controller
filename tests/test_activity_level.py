@@ -1,9 +1,4 @@
-"""Tests for the three-level activity system (Control / Listening / Standby).
-
-Covers the brightness + marquee mapping and idempotence in
-``DisplayState.set_activity_level``, and the resting-level reconciliation in
-``RadioStateMachine`` — including the external-stop path that regressed
-(clock shown but stuck at Listening instead of Standby)."""
+"""Tests for the three-level activity system"""
 import time
 from threading import Event
 from unittest.mock import MagicMock, patch
@@ -46,8 +41,7 @@ def _make_state_machine():
   volumio.has_status_stop.return_value = False
   volumio.get_status.return_value = 'play'
   display = MagicMock()
-  # Patch threads spawned during construction / transitions so tests don't
-  # leak real background threads and don't race with our assertions.
+  # Patch threads spawned on construction so tests don't leak real threads.
   with patch.object(radio_state_machine, 'ActivityTimeoutThread'), \
        patch.object(radio_state_machine, 'DatetimeDisplayThread'), \
        patch.object(radio_state_machine, 'PlayingTrackDisplayThread'):
@@ -94,12 +88,11 @@ def test_external_stop_while_locked_reaches_standby():
     sm.machine.set_state('home_playing')
     sm._is_locked_event.set()
     display.reset_mock()
-    # Volumio is now stopped; vigie would notice and call refresh_home().
     volumio.is_playing.return_value = False
     volumio.is_on_pause.return_value = False
     volumio.has_status_stop.return_value = True
     volumio.get_status.return_value = 'stop'
-    sm.refresh_home()
+    sm.refresh_home()  # vigie tick after Volumio stopped
   assert sm.state == 'home_sleeping'
   levels = [c.args[0] for c in display.set_activity_level.call_args_list]
   assert levels, 'expected set_activity_level to be called'
@@ -115,14 +108,13 @@ def test_external_play_while_locked_reaches_listening():
     sm.machine.set_state('home_sleeping')
     sm._is_locked_event.set()
     display.reset_mock()
-    # Volumio starts playing; vigie notices and calls refresh_home().
     volumio.is_playing.return_value = True
     volumio.is_on_pause.return_value = False
     volumio.has_status_stop.return_value = False
     volumio.get_status.return_value = 'play'
     volumio.can_play.return_value = True
     volumio.queue_is_not_empty.return_value = True
-    sm.refresh_home()
+    sm.refresh_home()  # vigie tick after playback started
   assert sm.state == 'home_playing'
   assert sm._is_locked_event.is_set()
   levels = [c.args[0] for c in display.set_activity_level.call_args_list]
@@ -131,8 +123,8 @@ def test_external_play_while_locked_reaches_listening():
 
 
 def test_reflected_stop_does_not_command_volumio():
-  """A silent (externally-reflected) stop must NOT re-command Volumio: calling
-  hold_on() there emits `pause` back and flips the state to home_holding."""
+  """Reflecting an external stop must NOT call hold_on() - that would emit
+  `pause` back to Volumio and bounce the state to home_holding."""
   sm, _display, volumio = _make_state_machine()
   with patch.object(radio_state_machine, 'DatetimeDisplayThread'), \
        patch.object(radio_state_machine, 'PlayingTrackDisplayThread'):
@@ -142,7 +134,7 @@ def test_reflected_stop_does_not_command_volumio():
     volumio.is_on_pause.return_value = False
     volumio.has_status_stop.return_value = True
     volumio.get_status.return_value = 'stop'
-    sm.refresh_home()  # vigie path -> silent
+    sm.refresh_home()  # vigie path -> silent reflection
   assert sm.state == 'home_sleeping'
   volumio.hold_on.assert_not_called()
 
@@ -160,7 +152,7 @@ def test_user_stop_commands_volumio():
 
 
 def test_external_interactive_stop_stays_standby_no_bounce():
-  """Full regression for the reported bug: locked + playing an interactive source,
+  """Locked + playing an interactive source,
   Volumio stops externally. Reflecting it must NOT emit `pause` (which would bounce
   the machine to home_holding / LISTENING). Driven through the vigie tick logic."""
   sm, display, volumio = _make_state_machine()
@@ -213,7 +205,7 @@ def test_unlocker_is_wired_to_restart_activity_timeout():
 
 def test_gesture_unlock_restarts_activity_timeout():
   """Regression: after the 12-bump gesture unlock the display must not stay
-  stuck in CONTROL — a fresh ActivityTimeoutThread has to be started so it
+  stuck in CONTROL - a fresh ActivityTimeoutThread has to be started so it
   returns to its resting level after 30 s."""
   display = MagicMock()
   locked = Event()
@@ -228,6 +220,6 @@ def test_gesture_unlock_restarts_activity_timeout():
     time.sleep(0.02)
   thread.join(timeout=2)
   assert not thread.is_alive()
-  assert not locked.is_set()          # unlocked
-  on_unlock.assert_called_once()      # timer restarted exactly once
+  assert not locked.is_set()
+  on_unlock.assert_called_once()  # activity timer restarted
   display.set_activity_level.assert_called_with(ActivityLevel.CONTROL)

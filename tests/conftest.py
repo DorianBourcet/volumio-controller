@@ -1,9 +1,5 @@
-"""Pytest config: mock hardware-dependent modules so tests can run on dev machines.
-
-Volumio's controller imports `board`, `busio`, `adafruit_ht16k33` and
-`adafruit_seesaw` at module load time. These probe Pi hardware on import and
-fail outside the target. We inject lightweight fakes before any project module
-loads so unit tests can run on macOS/Linux dev boxes."""
+"""Stub Pi-only modules (`board`, `busio`, `adafruit_ht16k33`, `adafruit_seesaw`)
+before any project module imports them, so tests run on dev machines."""
 import os
 import sys
 import types

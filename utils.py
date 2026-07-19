@@ -41,12 +41,6 @@ def fit_text(text: str) -> str:
   return text
 
 
-def spread_text(text: str) -> str:
-  if get_length(text) <= 3 and ' ' not in text:
-    return ' '.join(_TEXT_PART_RE.findall(text))
-  return text
-
-
 def shorten_text(text: str, ignorable_patterns: list[str] | None = None) -> str:
   if ignorable_patterns is None:
     ignorable_patterns = DEFAULT_IGNORABLE_PATTERNS

@@ -2,6 +2,7 @@ import time
 from threading import Event, Thread
 
 import logging_setup
+from constants import INPUT_POLL_INTERVAL_SEC
 from radio_state_machine import RadioStateMachine
 from user_input import UserInput
 
@@ -9,8 +10,6 @@ logger = logging_setup.get_logger(__name__)
 
 
 class UserInputListener(Thread):
-
-  POLL_INTERVAL_SEC = 0.05
 
   def __init__(
     self,
@@ -42,6 +41,6 @@ class UserInputListener(Thread):
           time.sleep(0.2)
         except Exception:
           logger.exception('encoder %d handler raised', self._input_number)
-        time.sleep(self.POLL_INTERVAL_SEC)
+        time.sleep(INPUT_POLL_INTERVAL_SEC)
     except Exception:
       logger.exception('input listener %d crashed', self._input_number)

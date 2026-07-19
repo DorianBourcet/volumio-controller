@@ -8,7 +8,6 @@ Unidecode==1.4.0
 
 # Volumio integration
 # python-socketio is pinned to 4.6.x because Volumio's server runs socket.io v2.
-# Upgrading to 5.x (which targets socket.io v4) will break the connection.
 python-socketio==4.6.1
 requests==2.32.5
 

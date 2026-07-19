@@ -2,6 +2,7 @@ import time
 from threading import Event, Thread
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from radio_state_machine import RadioStateMachine
 from volumio_thread import VolumioThread
 
@@ -9,8 +10,6 @@ logger = logging_setup.get_logger(__name__)
 
 
 class VigieThread(Thread):
-
-  POLL_INTERVAL_SEC = 0.25
 
   def __init__(self, volumio: VolumioThread, radio: RadioStateMachine, stop_event: Event):
     super().__init__(name='vigie')
@@ -34,7 +33,7 @@ class VigieThread(Thread):
           self._radio.reconcile_activity_level()
         except Exception:
           logger.exception('vigie tick failed')
-        time.sleep(self.POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
       logger.debug('vigie exiting')
     except Exception:
       logger.exception('vigie thread crashed')

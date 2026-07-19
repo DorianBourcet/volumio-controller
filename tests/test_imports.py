@@ -1,7 +1,5 @@
-"""Smoke tests: every project module imports cleanly under the conftest stubs.
-
-This catches breakage from circular imports, missing names, or hardware-side
-imports that escape the stubs."""
+"""Smoke tests: every project module imports cleanly under the conftest stubs,
+catching circular imports, missing names, and hardware imports that escape them."""
 
 
 def test_radio_state_machine_imports():

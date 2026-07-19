@@ -41,20 +41,8 @@ def test_browse_caches_results_between_calls():
   menu = make_menu(client)
   menu.browse('/some-uri')
   menu.browse('/some-uri')
-  # First call hits the client, second should be cached. The browse() method
-  # always re-calls though when uri is not in cache; here the uri *is* cached
-  # after the first call.
+  # Second call should be served from cache, not re-hit the client.
   assert client.browse.call_count == 1
-
-
-def test_invalidate_cache_forces_refetch():
-  client = MagicMock()
-  client.browse.return_value = {'navigation': {'lists': [{'items': []}]}}
-  menu = make_menu(client)
-  menu.browse('/x')
-  menu.invalidate_cache()
-  menu.browse('/x')
-  assert client.browse.call_count == 2
 
 
 def test_browse_handles_missing_navigation_key():

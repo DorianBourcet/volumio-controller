@@ -4,6 +4,7 @@ from typing import Any
 
 import logging_setup
 import utils
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import DisplayState
 from radio_state_machine import RadioStateMachine
 from volumio_menu import VolumioMenu
@@ -14,7 +15,6 @@ logger = logging_setup.get_logger(__name__)
 class MenuThread(Thread):
 
   CLOSE_AFTER_SEC = 30.0
-  POLL_INTERVAL_SEC = 0.25
 
   def __init__(self, display: DisplayState, radio: RadioStateMachine):
     super().__init__(name='menu')
@@ -167,6 +167,6 @@ class MenuThread(Thread):
       while not self._stop_event.is_set():
         if self._should_close():
           self.close()
-        time.sleep(self.POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
     except Exception:
       logger.exception('menu thread crashed')

@@ -2,12 +2,11 @@ import time
 from threading import Thread
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import DisplayState
 from volumio_thread import VolumioThread
 
 logger = logging_setup.get_logger(__name__)
-
-POLL_INTERVAL_SEC = 0.25
 
 
 class PlayingTrackDisplayThread(Thread):
@@ -30,6 +29,6 @@ class PlayingTrackDisplayThread(Thread):
           )
         else:
           self._display.set_persistent_texts(texts=['...'], continuous_marquee=False)
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
     except Exception:
       logger.exception('playing track display thread crashed')

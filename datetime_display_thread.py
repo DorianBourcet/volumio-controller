@@ -6,12 +6,12 @@ from threading import Thread
 import pytz
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import DisplayState
 
 logger = logging_setup.get_logger(__name__)
 
 TIMEZONE = pytz.timezone('America/Toronto')
-POLL_INTERVAL_SEC = 0.25
 
 
 class DatetimeDisplayThread(Thread):
@@ -44,6 +44,6 @@ class DatetimeDisplayThread(Thread):
       stop_event = self._display.issue_persistent_display_daemon_stop_event()
       while not stop_event.is_set():
         self._display_datetime()
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
     except Exception:
       logger.exception('datetime display thread crashed')

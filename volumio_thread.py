@@ -39,7 +39,6 @@ class VolumioThread(Thread):
     self._volumio_service = ''
     self._volumio_track_type = ''
     self._volumio_duration = 0
-    self._status_since = time.time()
     self._state_updated_on = time.time()
     self._selected_index = 0
 
@@ -106,9 +105,6 @@ class VolumioThread(Thread):
       volume = state.get('volume', 0) or 0
       self._volumio_volume = int(volume)
       status = state.get('status', 'stop')
-      if self._volumio_status != status:
-        self._volumio_status = status
-        self._status_since = time.time()
       self._volumio_status = status
       raw_artist = (state.get('artist', '') or '').strip()
       self._volumio_artist = utils.truncate(raw_artist, 84)
@@ -136,7 +132,7 @@ class VolumioThread(Thread):
 
   def _safe_emit(self, event: str, *payload) -> bool:
     if self._socketIO is None or not self._connected:
-      logger.debug('emit(%s) skipped — not connected', event)
+      logger.debug('emit(%s) skipped - not connected', event)
       return False
     try:
       if payload:
@@ -168,12 +164,6 @@ class VolumioThread(Thread):
 
   def is_on_pause(self) -> bool:
     return self.get_status() == 'pause'
-
-  def is_stopping(self) -> bool:
-    with self._lock:
-      if self._volumio_status != 'stop':
-        return False
-      return (time.time() - self._status_since) <= 5
 
   def is_interactive_broadcast(self) -> bool:
     with self._lock:
@@ -217,16 +207,6 @@ class VolumioThread(Thread):
   def get_current_queue_position(self) -> int:
     with self._lock:
       return self._volumio_queue_position
-
-  def get_next_track(self) -> str | None:
-    with self._lock:
-      next_position = self._volumio_queue_position + 1
-    return self.get_track(next_position)
-
-  def get_previous_track(self) -> str | None:
-    with self._lock:
-      previous_position = self._volumio_queue_position - 1
-    return self.get_track(previous_position)
 
   def next_track(self) -> None:
     with self._lock:
@@ -327,10 +307,6 @@ class VolumioThread(Thread):
   def pause(self) -> None:
     if self.get_status() == 'play':
       self._safe_emit('pause')
-
-  def get_current_service(self) -> str:
-    with self._lock:
-      return self._volumio_service
 
   def shutdown(self) -> None:
     self._stopping = True

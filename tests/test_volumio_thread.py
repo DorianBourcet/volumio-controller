@@ -1,8 +1,4 @@
-"""Unit tests for VolumioThread without spinning up Socket.IO.
-
-Tests focus on the state-management code paths and on the regression bugs
-called out in the architectural review: B1 (previous_track double-emit) and
-B2 (get_track out-of-bounds returning a wrong value)."""
+"""Unit tests for VolumioThread state-management, without a live Socket.IO."""
 from unittest.mock import MagicMock
 
 import volumio_thread
@@ -42,13 +38,6 @@ class TestStateUpdates:
     push_state(vt, volume=42)
     assert vt.get_volume() == 42
 
-  def test_status_change_resets_status_since(self):
-    vt = make_thread()
-    push_state(vt, status='play')
-    first = vt._status_since
-    push_state(vt, status='pause')
-    assert vt._status_since >= first
-
   def test_invalid_payload_ignored(self):
     vt = make_thread()
     vt._on_state_response('not a dict')
@@ -62,7 +51,7 @@ class TestStateUpdates:
 
 
 class TestVolumeBounds:
-  """B5: volume_up/down must be bounded to [0, 100]."""
+  """volume_up/down must be bounded to [0, 100]."""
 
   def test_volume_up_caps_at_100(self):
     vt = make_thread()
@@ -85,7 +74,7 @@ class TestVolumeBounds:
 
 
 class TestPreviousTrackBugFix:
-  """B1: previous_track must emit `prev` once, not twice."""
+  """previous_track must emit `prev` once, not twice."""
 
   def test_emits_once_when_seek_below_threshold(self):
     vt = make_thread()
@@ -114,7 +103,7 @@ class TestPreviousTrackBugFix:
 
 
 class TestGetTrackBoundsBugFix:
-  """B2: get_track must not silently return the wrong element on bad indices."""
+  """get_track must not silently return the wrong element on bad indices."""
 
   def test_negative_index_returns_none(self):
     vt = make_thread()
@@ -139,12 +128,6 @@ class TestGetTrackBoundsBugFix:
     vt = make_thread()
     push_queue(vt, [{'name': 'fallback'}])
     assert vt.get_track(0) == 'fallback'
-
-  def test_get_previous_track_at_position_zero_returns_none(self):
-    vt = make_thread()
-    push_queue(vt, [{'title': 'a'}, {'title': 'b'}, {'title': 'c'}])
-    push_state(vt, position=0)
-    assert vt.get_previous_track() is None
 
 
 class TestNextTrack:

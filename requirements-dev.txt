@@ -1,7 +1,5 @@
-# Tooling for local dev / running the test suite. Not deployed to the Pi.
-#
-# Adafruit hardware packages are intentionally NOT listed: tests stub them in
-# tests/conftest.py so the suite runs on macOS / Linux dev machines.
+# Adafruit hardware packages are intentionally not listed: tests stub them in
+# tests/conftest.py so the suite runs on dev machines.
 
 # Test framework
 pytest>=7.0

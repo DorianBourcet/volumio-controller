@@ -1,13 +1,12 @@
 import time
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import DisplayState
 from track_elapsed_time_display_thread import TrackElapsedTimeDisplayThread
 from volumio_thread import VolumioThread
 
 logger = logging_setup.get_logger(__name__)
-
-POLL_INTERVAL_SEC = 0.25
 
 
 class PlayingTrackElapsedTimeDisplayThread(TrackElapsedTimeDisplayThread):
@@ -27,6 +26,6 @@ class PlayingTrackElapsedTimeDisplayThread(TrackElapsedTimeDisplayThread):
           duration=0.25,
           stop_daemons=False,
         )
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
     except Exception:
       logger.exception('elapsed time display thread crashed')

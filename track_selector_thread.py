@@ -2,6 +2,7 @@ import time
 from threading import Event, Thread
 
 import logging_setup
+from constants import DISPLAY_POLL_INTERVAL_SEC
 from display_state import DisplayState
 from volumio_thread import VolumioThread
 
@@ -9,8 +10,6 @@ logger = logging_setup.get_logger(__name__)
 
 
 class TrackSelectorThread(Thread):
-
-  POLL_INTERVAL_SEC = 0.25
 
   def __init__(
     self,
@@ -42,7 +41,7 @@ class TrackSelectorThread(Thread):
         return
       self._start = time.time()
       while not self._stop_event.is_set() and not self.should_select():
-        time.sleep(self.POLL_INTERVAL_SEC)
+        time.sleep(DISPLAY_POLL_INTERVAL_SEC)
       if not self._stop_event.is_set():
         self._volumio.play_track(self._index)
         self._display.display_temporary_text(

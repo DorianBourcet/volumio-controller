@@ -21,13 +21,6 @@ class VolumioMenu:
     self._uri_cache: dict[str, dict[str, dict[str, Any]]] = {}
     self._client = client or volumio_client.default_client()
 
-  def invalidate_cache(self, uri: str | None = None) -> None:
-    if uri is None:
-      self._uri_cache.clear()
-      self._latest_uri = None
-      return
-    self._uri_cache.pop(uri, None)
-
   def _set_uri_items(self, uri: str, items: list[dict[str, Any]]) -> None:
     items_by_uri = {item['uri']: item for item in items if 'uri' in item}
     self._uri_cache[uri] = items_by_uri

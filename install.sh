@@ -8,7 +8,7 @@ SERVICE_NAME="volumio-controller"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 if [ ! -e /dev/i2c-1 ]; then
-  echo "WARNING: /dev/i2c-1 not found — I²C bus may not be enabled."
+  echo "WARNING: /dev/i2c-1 not found - I2C bus may not be enabled."
   echo "         Run 'sudo raspi-config' → Interface Options → I2C → Enable."
 fi
 
@@ -35,8 +35,7 @@ echo "==> Installing systemd service..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Volumio Controller Service
-After=multi-user.target network-online.target
-Wants=network-online.target
+After=multi-user.target
 
 [Service]
 User=volumio
