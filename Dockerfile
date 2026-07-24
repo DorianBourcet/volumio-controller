@@ -1,6 +1,4 @@
 # Test environment matching the Volumio OS 4 target (Python 3.11.2, Debian bookworm).
-# Runs the pytest suite in the target Python version.
-#
 # Only requirements-dev.txt is installed: the Adafruit hardware packages in
 # requirements.txt are ARM/Pi-only and are stubbed by tests/conftest.py.
 FROM python:3.11-slim-bookworm

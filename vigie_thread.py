@@ -27,9 +27,8 @@ class VigieThread(Thread):
           if self._radio.is_home(allow_substates=True) and status != self._latest_volumio_status:
             self._radio.refresh_home()
             self._latest_volumio_status = self._volumio.get_status()
-          # Continuously reconcile the resting brightness with the real status,
-          # so a locked display converges to STANDBY once Volumio is stopped
-          # even if the machine transiently settled elsewhere. Idempotent.
+          # Reconcile resting brightness with the real status every tick, so a
+          # locked display converges to STANDBY once Volumio stops. Idempotent.
           self._radio.reconcile_activity_level()
         except Exception:
           logger.exception('vigie tick failed')

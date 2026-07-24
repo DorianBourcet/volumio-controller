@@ -6,6 +6,7 @@ from unidecode import unidecode
 
 import logging_setup
 import utils
+from constants import DISPLAY_POLL_INTERVAL_SEC
 
 logger = logging_setup.get_logger(__name__)
 
@@ -39,6 +40,9 @@ class DisplayThread(Thread):
   def _get_duration(self) -> float:
     return self._duration
 
+  def _should_stop(self) -> bool:
+    return self._stop_event.is_set()
+
   def _print(self, text: str) -> None:
     upper = text.upper().replace('N°', 'No').replace(':', ' ')
     self._display_state.print(unidecode(upper), self._bypass_sleep_mode)
@@ -49,13 +53,13 @@ class DisplayThread(Thread):
     else:
       full_text = self._text_center(text, length)
     self._print(full_text)
-    if self._stop_event.is_set():
+    if self._should_stop():
       return
     splitted_text = utils.split_text(text)
     sleep_time = 0.25 / max(length, 1)
     time.sleep(0.1)
     for i in range(len(splitted_text)):
-      if self._stop_event.is_set():
+      if self._should_stop():
         return
       partial = ''.join(splitted_text[:i]) + ' ' + ''.join(splitted_text[i + 1:])
       if align_left:
@@ -85,15 +89,15 @@ class DisplayThread(Thread):
     else:
       full_text = self._text_center(text, length)
     start = time.time()
-    if self._stop_event.is_set():
+    if self._should_stop():
       return
     if animate:
       self._animate(text, align_left, length)
-    if self._stop_event.is_set():
+    if self._should_stop():
       return
     self._print(full_text)
     now = start
-    while not self._stop_event.is_set() and now <= start + duration:
+    while not self._should_stop() and now <= start + duration:
       time.sleep(self._display_state.marquee_sleep_delay)
       now = time.time()
 
@@ -108,7 +112,7 @@ class DisplayThread(Thread):
       return
     start = 0
     delay_start = trim_start
-    while not self._stop_event.is_set() and start < len(parts) - DISPLAY_WIDTH:
+    while not self._should_stop() and start < len(parts) - DISPLAY_WIDTH:
       self._print(''.join(parts[start:start + DISPLAY_WIDTH]))
       if delay_start:
         delay_start = False
@@ -116,12 +120,33 @@ class DisplayThread(Thread):
         start += 1
       time.sleep(self._display_state.marquee_sleep_delay)
 
+  def _continuous_marquee(self, text: str) -> None:
+    text = text + '  '
+    parts = re.findall(r'([^\.]\.|[^\.]|\.)', text)
+    length = len(parts)
+    if length == 0:
+      return
+    start = 0
+    while not self._should_stop():
+      acc = []
+      idx = start
+      for _ in range(DISPLAY_WIDTH):
+        if idx >= length:
+          idx = 0
+        acc.append(parts[idx])
+        idx += 1
+      self._print(''.join(acc))
+      start += 1
+      if start >= length:
+        start = 0
+      time.sleep(DISPLAY_POLL_INTERVAL_SEC)
+
   def _after_run(self) -> None:
     pass
 
   def run(self) -> None:
     try:
-      if self._stop_event.is_set():
+      if self._should_stop():
         return
       self._display_state.currently_selected_text = self._text_to_display
       length = utils.get_length(self._text_to_display)
