@@ -1,13 +1,14 @@
-from threading import Thread, Event
+from threading import Thread
+
 from display_state import DisplayState
-from volumio_thread import VolumioThread
-import time
 from utils import format_min_sec
+from volumio_thread import VolumioThread
+
 
 class TrackElapsedTimeDisplayThread(Thread):
 
-  def __init__(self, volumio:VolumioThread, display:DisplayState):
-    super().__init__()
+  def __init__(self, volumio: VolumioThread, display: DisplayState):
+    super().__init__(name='track-elapsed')
     self._volumio = volumio
     self._display = display
 
@@ -17,9 +18,9 @@ class TrackElapsedTimeDisplayThread(Thread):
     elapsed_text = ' --.--'
     duration_text = ' --.--'
     if duration != 0 and elapsed <= duration:
-      elapsed_text = format_min_sec(elapsed).rjust(6,' ')
-      duration_text = format_min_sec(duration).rjust(6,' ')
-    return elapsed_text+'  '+duration_text
-  
-  def run(self):
+      elapsed_text = format_min_sec(elapsed).rjust(6, ' ')
+      duration_text = format_min_sec(duration).rjust(6, ' ')
+    return f'{elapsed_text}  {duration_text}'
+
+  def run(self) -> None:
     pass

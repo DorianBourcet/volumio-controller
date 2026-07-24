@@ -1,0 +1,14 @@
+# Adafruit hardware packages are intentionally not listed: tests stub them in
+# tests/conftest.py so the suite runs on dev machines.
+
+# Test framework
+pytest>=7.0
+pytest-mock>=3.10
+responses>=0.23
+
+# Runtime libs imported during tests (subset of requirements.txt, minus HW)
+requests==2.32.5
+Unidecode==1.4.0
+python-socketio==4.6.1
+transitions==0.9.3
+pytz==2025.2

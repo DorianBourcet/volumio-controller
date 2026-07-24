@@ -1,20 +1,39 @@
-from main_thread import MainThread
-from display_state import DisplayState
-import graceful_killer
-import time
 import os
+import time
 
-def main(display: DisplayState):
+import logging_setup
+
+logging_setup.configure()
+logger = logging_setup.get_logger(__name__)
+
+import graceful_killer
+from display_state import DisplayState
+from main_thread import MainThread
+
+
+def main(display: DisplayState) -> MainThread:
   thread = MainThread(display)
   thread.daemon = True
   thread.start()
+  return thread
+
 
 if __name__ == '__main__':
+  logger.info('volumio-controller starting')
   display = DisplayState()
-  main(display)
-  while not graceful_killer.kill_now:
-    time.sleep(1)
-  time.sleep(2.0)
-  display.print()
-  if graceful_killer.shutdown_machine:
+  main_thread = main(display)
+  graceful_killer.killer.wait()
+  logger.info('shutdown requested, stopping subsystems')
+  try:
+    main_thread.stop(timeout=3.0)
+  except Exception:
+    logger.exception('error while stopping main thread')
+  try:
+    display.shutdown()
+  except Exception:
+    logger.exception('error while shutting down display')
+  if graceful_killer.killer.shutdown_machine:
+    logger.info('halting machine')
     os.system('sudo shutdown -h now')
+  else:
+    logger.info('volumio-controller exited cleanly')
