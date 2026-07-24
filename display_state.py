@@ -1,6 +1,5 @@
 import time
 from enum import Enum
-from itertools import cycle
 from threading import Event, Lock
 
 import board
@@ -8,7 +7,6 @@ import busio as io
 import adafruit_ht16k33.segments
 
 import logging_setup
-from continuous_marquee_display_thread import ContinuousMarqueeDisplayThread
 from persistent_display_thread import PersistentDisplayThread
 from temporary_display_thread import TemporaryDisplayThread
 
@@ -44,7 +42,6 @@ class DisplayState:
     self._print_lock = Lock()
     self.displaying_persistent = False
     self._persistent_texts: list[str] = ['.  ', '.. ', '...', ' ..', '  .', '']
-    self._persistent_texts_iterable = cycle(self._persistent_texts)
     self._persistent_texts_continuous_marquee = False
     self._persistent_text_duration = 5.0
     self._sleep_mode = False
@@ -53,6 +50,8 @@ class DisplayState:
     self.temporary_text: str | None = None
     self.currently_selected_text: str | None = None
     self.marquee_sleep_delay = 0.20
+    self._persistent_gen = 0
+    self._persistent_loop: PersistentDisplayThread | None = None
     self._current_activity_level: ActivityLevel | None = None
     self.set_activity_level(ActivityLevel.STANDBY)
 
@@ -118,6 +117,27 @@ class DisplayState:
       self._sleep_mode = False
       self.print(self._latest_text)
 
+  def persistent_gen(self) -> int:
+    return self._persistent_gen
+
+  def persistent_render_spec(self) -> tuple[list[str], bool, float, int]:
+    with self._print_lock:
+      return (
+        list(self._persistent_texts),
+        self._persistent_texts_continuous_marquee,
+        self._persistent_text_duration,
+        self._persistent_gen,
+      )
+
+  def _ensure_persistent_loop(self, marquee_trim_start: bool = False) -> None:
+    self.displaying_persistent = True
+    if self._persistent_loop is not None and self._persistent_loop.is_running():
+      return
+    self._persistent_loop = PersistentDisplayThread(
+      self, self._issue_stop_event(), marquee_trim_start,
+    )
+    self._persistent_loop.start()
+
   def display_persistent_texts(
     self,
     texts: list[str] | None = None,
@@ -126,30 +146,25 @@ class DisplayState:
     marquee_trim_start: bool = False,
     stop_daemons: bool = True,
   ) -> None:
+    changed = False
     if continuous_marquee is not None:
+      if continuous_marquee != self._persistent_texts_continuous_marquee:
+        changed = True
       self._persistent_texts_continuous_marquee = continuous_marquee
     if duration is not None:
+      if duration != self._persistent_text_duration:
+        changed = True
       self._persistent_text_duration = duration
     if stop_daemons:
       self.issue_persistent_display_daemon_stop_event()
       self.issue_temporary_display_daemon_stop_event()
-    self.displaying_persistent = True
-    if texts is not None:
-      self.set_persistent_texts(texts)
-    elif self._persistent_texts_continuous_marquee:
-      ContinuousMarqueeDisplayThread(
-        self,
-        ' '.join(self._persistent_texts),
-        self._issue_stop_event(),
-      ).start()
-    else:
-      PersistentDisplayThread(
-        self,
-        next(self._persistent_texts_iterable),
-        self._issue_stop_event(),
-        self._persistent_text_duration,
-        marquee_trim_start,
-      ).start()
+    if texts is not None and texts != self._persistent_texts:
+      self._persistent_texts = texts
+      changed = True
+    loop_running = self._persistent_loop is not None and self._persistent_loop.is_running()
+    if changed or not loop_running:
+      self._persistent_gen += 1
+    self._ensure_persistent_loop(marquee_trim_start)
 
   def set_persistent_texts(
     self,
@@ -157,19 +172,22 @@ class DisplayState:
     duration: float | None = None,
     continuous_marquee: bool | None = None,
   ) -> None:
+    changed = False
     if continuous_marquee is not None:
+      if continuous_marquee != self._persistent_texts_continuous_marquee:
+        changed = True
       self._persistent_texts_continuous_marquee = continuous_marquee
     if duration is not None:
+      if duration != self._persistent_text_duration:
+        changed = True
       self._persistent_text_duration = duration
     if texts != self._persistent_texts:
       self._persistent_texts = texts
-      self._persistent_texts_iterable = cycle(texts)
+      changed = True
+    if changed:
+      self._persistent_gen += 1
       if self.displaying_persistent:
-        if texts and texts[0] == self.currently_selected_text:
-          next(self._persistent_texts_iterable)
-        else:
-          self._issue_stop_event()
-          self.display_persistent_texts(stop_daemons=False)
+        self._ensure_persistent_loop()
 
   def display_temporary_text(
     self,

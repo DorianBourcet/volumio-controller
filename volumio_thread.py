@@ -1,7 +1,7 @@
 import math
 import os
 import time
-from threading import RLock, Thread
+from threading import Event, RLock, Thread
 
 import socketio
 
@@ -27,6 +27,7 @@ class VolumioThread(Thread):
     self._socketIO: socketio.Client | None = None
     self._lock = RLock()
     self._connected = False
+    self._ready = Event()
     self._stopping = False
     self._volumio_volatile = False
     self._volumio_status = 'stop'
@@ -76,6 +77,7 @@ class VolumioThread(Thread):
   def _on_disconnect(self) -> None:
     with self._lock:
       self._connected = False
+    self._ready.clear()
     logger.warning('socket.io disconnected')
 
   def _on_reconnect(self) -> None:
@@ -119,6 +121,7 @@ class VolumioThread(Thread):
       self._volumio_seek = math.floor((state.get('seek', 0) or 0) / 1000)
       self._volumio_duration = state.get('duration', 0) or 0
       self._volumio_volatile = state.get('volatile', False)
+    self._ready.set()
 
   def _on_queue_response(self, *args) -> None:
     if not args:
@@ -147,6 +150,9 @@ class VolumioThread(Thread):
   def is_connected(self) -> bool:
     with self._lock:
       return self._connected
+
+  def is_ready(self) -> bool:
+    return self._ready.is_set()
 
   def queue_is_not_empty(self) -> bool:
     with self._lock:

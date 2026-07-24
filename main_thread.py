@@ -1,4 +1,3 @@
-import time
 from threading import Event, Thread
 
 import logging_setup
@@ -50,16 +49,16 @@ class MainThread(Thread):
   def run(self) -> None:
     try:
       self._start_subsystems()
+      was_ready = False
       while not self._stop_event.is_set():
-        if self._volumio.is_connected():
+        ready = self._volumio.is_ready()
+        if ready and not was_ready:
           self._radio.back_home()
-        while not self._stop_event.is_set() and self._volumio.is_connected():
-          time.sleep(1)
-        if self._stop_event.is_set():
-          break
-        logger.warning('lost connection to volumio, awaiting reconnect')
-        self._radio.wait_for_connection()
-        time.sleep(1)
+        elif not ready and was_ready:
+          logger.warning('lost connection to volumio, awaiting reconnect')
+          self._radio.wait_for_connection()
+        was_ready = ready
+        self._stop_event.wait(0.5)
     except Exception:
       logger.exception('main thread crashed')
 

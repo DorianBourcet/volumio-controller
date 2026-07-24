@@ -150,6 +150,27 @@ class TestEmitWhenDisconnected:
     vt._socketIO.emit.assert_not_called()
 
 
+class TestReadiness:
+  """Volumio is 'ready' only once the first real state payload has arrived, so
+  home never flashes the stale default 'stop'."""
+
+  def test_not_ready_before_any_state(self):
+    vt = volumio_thread.VolumioThread()
+    assert vt.is_ready() is False
+
+  def test_ready_after_first_state(self):
+    vt = make_thread()
+    push_state(vt)
+    assert vt.is_ready() is True
+
+  def test_ready_cleared_on_disconnect(self):
+    vt = make_thread()
+    push_state(vt)
+    assert vt.is_ready() is True
+    vt._on_disconnect()
+    assert vt.is_ready() is False
+
+
 class TestSelectedIndexNavigation:
   def test_next_wraps(self):
     vt = make_thread()
